@@ -1,0 +1,41 @@
+<div class="navbar container">
+	<div class="navbar-inner">
+		<a class="brand hidden-phone" href="/">{{ siteName }}</a>
+		<ul class="nav">
+			{% if characters %}
+			<li class="{{ isActive(pageTitle, 'Home') }}"><a href="/">All</a></li>
+			{% endif %}
+		</ul>
+		<ul class="nav hidden-phone">
+			{% if characters %}
+			{% for char in characters %}
+			<li class="{{ isActive(pageTitle, char.characterName) }}"><a href="/char/{{ char.characterName|url_encode }}" style="padding-left: 6px; padding-right: 6px; padding-top: 4px; padding-bottom: 4px;"><img src="{{ image_character}}{{char.characterID}}_32.jpg" title="{{ char.characterName }}"/></a></li>
+			{% endfor %}
+			{% endif %}
+		</ul>
+		<ul class="nav visible-phone">
+			<li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Characters<b class="caret"></b></a>
+				<ul class="dropdown-menu">
+					{% for char in characters %}
+						<li class="{{ isActive(pageTitle, char.characterName) }}"><a href="/char/{{ char.characterName|url_encode }}" style="padding-left: 6px; padding-right: 6px; padding-top: 4px; padding-bottom: 4px;"><img src="{{ image_character}}{{char.characterID}}_32.jpg" title="{{ char.characterName }}"/> {{ char.characterName }}</a></li>
+					{% endfor %}
+				</ul>
+			</li>
+		</ul>
+		<ul class="nav pull-right">
+		{% if sessionusername == "" %}
+                        <li><a href="/register/">Register</a></li>
+						<li><a class="dropdown-toggle" href="/login/">Sign In</a></li>
+		{% else %}
+			<li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">{{ sessionusername }}<b class="caret"></b></a>
+				<ul class="dropdown-menu">
+					<li><a href="/manage/">Manage API</a></li>
+					<li><a href="/shares/">Shares</a></li>
+					<li><a href="/account/">Account</a></li>
+					<li><a href="/logout/">Logout</a></li>
+				</ul>
+			</li>
+		{% endif %}
+		</ul>
+	</div>
+</div>

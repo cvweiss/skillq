@@ -1,0 +1,11 @@
+<div class="navbar container">
+        <div class="navbar-inner">
+        <ul class="nav">
+                <li class="{{ isActive('overview', pageType) }}"><a href="/char/{{ char.nameEncoded }}/">Overview</a></li>
+		{% if not isShare %}
+		<li class="{{ isActive('wallet', pageType) }}"><a href="/char/{{ char.nameEncoded }}/wallet/">Wallet</a></li>
+		<li class="{{ isActive('train', pageType) }}"><a href="/char/{{ char.nameEncoded }}/train/">Train</a></li>
+		{% endif %}
+        </ul>
+        </div>
+</div>

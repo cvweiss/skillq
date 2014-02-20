@@ -1,0 +1,14 @@
+{
+    "require": {
+        "slim/slim": "2.1.0",
+        "slim/extras": "2.0.0",
+        "twig/twig": "1.10",
+        "twig/extensions": "1.*",
+        "aptoma/twig-markdown": "*",
+        "pheal/pheal": "*",
+        "phpmailer/phpmailer": "*",
+	"cvweiss/zlibrary":"*"
+    },
+    "minimum-stability": "stable",
+	"prefer-stable": true
+}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% set pageTitle = char.characterName %}
+
+{% block content %}
+{% include 'components/char_info.html' %}
+
+{% include 'components/char_menu.html' %}
+
+{% if pageType == 'overview' %}{% include 'components/char_skills.html' %}{% endif %}
+{% if pageType == 'wallet' %}{% include 'components/char_wallet.html' %}{% endif %}
+{% if pageType == 'train' %}{% include 'components/char_train.html' %}{% endif %}
+
+
+{% endblock %}

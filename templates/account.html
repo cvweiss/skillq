@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% set pageTitle = 'Account' %}
+
+{% block content %}
+<div class="row">
+	<div class="span4">
+	<form method="post" action="/account/">
+	<h3>Account Settings</h3>
+	<table class="table">
+		<tr><th>User:</th><td>{{ config.info.username }}</td></tr>
+		<tr><th>Email:</th><td><input style="width: 100%;" type="text" name="email" type="email" placeholder="{{ config.info.email }}"></td></tr>
+		<tr><th>Queue:</th><td><label class="checkbox"><input type="checkbox" {{ config.sendQEmails ? 'checked' : ''}} name="sendQEmails"> Receive notifications via email if your skill queue has less than 24 hours remaining?</label></td></tr>
+		<tr><th>Account:</th><td><label class="checkbox"><input type="checkbox" {{ config.sendAccEmails ? 'checked' : ''}} name="sendAccEmails"> Receive notifications via email if your account has less than 24 hours of subscription time remaining?<br/><em>(not yet implemented)</em></label></td></tr>
+		<tr><th>Refresh:</th><td><label class="checkbox"><input type="checkbox" {{ config.refreshPages ? 'checked' : ''}} name="refreshPages"> Automatically refresh webpages to see the latest updates when the API refreshes?</label></td></tr>
+		<tr><td>&nbsp;</td><td><input type="submit" value="Update" class="pull-right btn btn-primary">
+	</table>
+	</form>
+	</div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% set netWealth = 0 %}
+
+{% block content %}
+	{% if chars %}
+		<div class="row-fluid">
+			<div class="characters span12">
+				{% for char in chars %}
+					{% set netWealth = netWealth + char.balance %}
+					<div class="pull-left" style="margin-right: 1em;"><div class="well well-small" style="width: 310px; height: 150px; max-height: 150px;">
+						<table class="table table-condensed table-borderless">
+							<tr>
+								<td style="width: 128px;" class="hidden-phone">
+									<a href="/char/{{ char.characterName|url_encode }}">
+										<img src="{{ image_character }}{{ char.characterID }}_128.jpg" class="hidden-phone" style="height: 128px; width: 128px;">
+									</a>
+								</td>
+								<td style="width: 64px;" class="visible-phone">
+									<a href="/char/{{ char.characterName|url_encode }}">
+										<img src="{{ image_character }}{{ char.characterID }}_64.jpg" class="visible-phone" style="height: 64px; width: 64px;">
+									</a>
+								</td>
+								<td class="pull-left">
+									<strong><a href="/char/{{ char.characterName|url_encode }}">{{ char.characterName }}</a></strong><br/>
+									{{ char.balance|number_format(2) }} ISK<br/>
+									{% if char.typeName and char.subStatus != 'Subscription Expired' %}
+										{{ char.typeName }} {{ char.tLevel }}<br/>
+										<span id="countdown{{char.characterID}}">{{ char.trainingEndTime }}</span><br/>
+										<span id="cache{{char.characterID}}"></span>
+										{% if char.queueFinishesSeconds < 86400 and char.queueFinishesSeconds > 0 %}
+											{% set qf = true %}
+											<p class="text-error">Skill Queue: <span id="queueTime{{ char.characterID }}"></span></p>
+										{% endif %}
+										<script type="text/javascript">
+											$(function () {
+												$('#countdown{{char.characterID}}').countdown({until: '{{ char.trainingSeconds }}', compact: true });
+												{% if qf %}$('#queueTime{{ char.characterID }}').countdown({until: '{{ char.queueFinishesSeconds }}', compact: true});{% endif %}
+											});
+										</script>
+									{% endif %}
+										{% if char.subStatus != "" %}
+											<p class="text-error"><em><strong>{{ char.subStatus }}</strong></em></p>
+										{% endif %}
+								</td>
+							</tr>
+						</table>
+					</div></div>
+				{% endfor %}
+			</div>
+		</div>
+
+		{% if chars|length > 1 %}
+			<div class="row"><div class="well span3">
+				Net ISK: {{ netWealth|number_format(2) }}
+			</div></div>
+		{% endif %}
+	{% else %}
+		<em>You are not logged in! Click <a href="/login/">here to login</a> or <a href="/register/">here to register</a>...</em><br/><br/>
+		<div class="hero-unit">
+			<h2>What is SkillQ?</h2>
+			<p>SkillQ allows you to monitor your skills in a single place using any browser on your desktop or mobile device.  SkillQ will also email you when your skill queue gets low: you will receive emails when your skill queue has less than 24 hours and 6 hours.</p>
+			<p>Here are some example screenshots:</p>
+			<p><img src="/img/skillq_01.png"/><br/><br/><img src="/img/skillq_02.png"/><br/><br/><img src="/img/skillq_03.png"></p>
+		</div>
+	{% endif %}
+{% endblock %}

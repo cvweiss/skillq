@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% set pageTitle = "Shares" %}
+
+{% block content %}
+<div class="">
+{% if message %}
+    <div class="alert">
+        {{ message }}
+    </div>
+{% endif %}
+</div>
+
+<div class="row">
+<div class="well pull-right span5">
+<h3>Create Share</h3>
+<form name="addshares" method="post" action="/shares/">
+        <table class="table table-condensed">
+            <tbody>
+            <tr><td style="width: 1em;">Character:</td><td>
+				<select name="characterid">
+			{% for character in characters %}
+				<option value="{{ character.characterID}}">{{ character.characterName }}</option>
+			{% endfor %}
+				</select>
+			</td></tr>
+            <tr><td>Share ID:</td><td class=""><input id="shareid" name="shareid" type="text" placeholder="Leave blank to automatically generate a share ID." style="width: 100%"></td></tr>
+            <tr><td><input type="submit" class="btn btn-primary" value="Add Share"></td><td>&nbsp;</td></tr>
+            </tbody>
+        </table>
+</form>
+</div>
+
+<div class="well pull-left span6">
+<h3>Shares</h3>
+{% if shares|length == 0 %}
+<em>No shares to display...</em>
+{% else %}
+<table class="table table-condensed table-hover table-striped table-bordered">
+	<tbody>
+	<tr>
+		<th>Character</th>
+		<th>Expires</th>
+		<th>&nbsp;</th>
+	</tr>
+{% for share in shares %}
+	{% set link = 'http://skillq.net/char/' ~ (share.characterName|url_encode) ~ '/share/' ~ (share.shareID|url_encode) %}
+	<tr>
+		<td><a href="{{link}}" target="_blank">{{ share.characterName }}</a></td>
+		<td>{{ share.expirationTime }}</td> 
+		<td><strong class="text-error pull-right" style="cursor: pointer;" onclick="if(confirm('Are you sure you want to delete this share?')) window.location='/shares/action/delete/{{ share.shareID }}'" title="Delete this Share">X</strong></td>
+	</tr>
+{% endfor %}
+	</tbody>
+</table>
+{% endif %}
+<p>Shares allow you to share a Character Overview page with anyone who has the link you give to them!  Users do not even need to be logged in to view the share.  Shares are setup to automatically expire after 3 days.</p>
+</div>
+</div>
+
+{% endblock %}
