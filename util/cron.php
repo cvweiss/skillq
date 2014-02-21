@@ -204,8 +204,8 @@ function statusCheckHours($hours) {
 			$count = Db::queryField("select count(*) count from skq_email_history where email = :email and event = :event", "count",
 					array(":email" => $email, ":event" => $event), 0);
 			if ($count == 0) {
-				Db::execute("insert into skq_email_history (email, event) values (:email, :event)", array(":email" => $email, ":event" => $event));
 				Email::create($email, $subject, $body);
+				Db::execute("insert into skq_email_history (email, event) values (:email, :event)", array(":email" => $email, ":event" => $event));
 			}
 		} catch (Exception $ex) {
 			continue;
@@ -230,8 +230,8 @@ function statusCheckHours($hours) {
 			$count = Db::queryField("select count(*) count from skq_email_history where email = :email and event = :event", "count",
 					array(":email" => $email, ":event" => $event), 0);
 			if ($count == 0) {
-				Db::execute("insert into skq_email_history (email, event) values (:email, :event)", array(":email" => $email, ":event" => $event));
 				Email::create($email, $subject, $body);
+				Db::execute("insert into skq_email_history (email, event) values (:email, :event)", array(":email" => $email, ":event" => $event));
 			}
 		} catch (Exception $ex) {
 			continue;
