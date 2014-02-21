@@ -213,7 +213,7 @@ function statusCheckHours($hours) {
 	}
 	// Check for out of date clones
 	Db::execute("update skq_character_info i, (select characterID, sum(skillPoints) skillPoints from skq_character_skills group by 1) as s set i.skillPoints = s.skillPoints where i.characterID = s.characterID");
-	$insufficientClones = Db::query("select keyRowID, characterID, characterName, skillPoints, cloneSkillPoints from skq_character_info where cloneSkillPoints < skillPoints and display = 1");
+	$insufficientClones = Db::query("select keyRowID, characterID, characterName, skillPoints, cloneSkillPoints from skq_character_info where cloneSkillPoints < skillPoints and display = 1 and subFlag != 2");
 	foreach($insufficientClones as $row) {
 		$name = $row["characterName"];
 		$sp = $row["skillPoints"];
