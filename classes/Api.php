@@ -45,7 +45,7 @@ class Api
 	 */
 	public static function addApi($keyID, $vCode)
 	{
-		$userID = user::getUserID();
+		$userID = User::getUserID();
 		if ($userID == null) throw new Exception("Must be logged in to add an API");
 
 		$exists = Db::queryRow("SELECT userID, keyID, vCode FROM skq_api WHERE keyID = :keyID AND vCode = :vCode", array(":keyID" => $keyID, ":vCode" => $vCode), 0);
