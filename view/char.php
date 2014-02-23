@@ -35,6 +35,7 @@ if ($pageType == "train") {
 	$allSkills = Db::query("select * from skq_skill_attributes");
 	foreach($allSkills as $skill) {
 		$typeID = $skill["typeID"];
+		if (!isset($attributes[$skill["primaryAttribute"]]) || !isset($attributes[$skill["secondaryAttribute"]])) continue;
 		$primaryValue = $attributes[$skill["primaryAttribute"]];
 		$secondaryValue = $attributes[$skill["secondaryAttribute"]];
 		$currentTrained = Db::queryRow("select * from skq_character_skills where characterID = :charID and typeID = :typeID", array(":charID" => $charID, ":typeID" => $typeID), 1);
