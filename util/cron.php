@@ -32,7 +32,7 @@ function checkApis() {
 
 function updateChars() {
 	for ($i = 0; $i < 60; $i++) {
-		$chars = Db::query("select * from skq_character_info where cachedUntil < now() and display = 1 order by lastChecked", array(), 0);
+		$chars = Db::query("select * from skq_character_info where cachedUntil < now() and display = 1 and subFlag != 2 order by lastChecked", array(), 0);
 		foreach($chars as $char) {
 			try {
 				Log::log("Updating " . $char["characterName"]);
