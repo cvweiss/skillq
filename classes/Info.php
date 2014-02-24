@@ -259,15 +259,13 @@ class Info
     }
 
     /**
-     * Attempt to find the name of a corporation in the corporations table.    If not found the
-     * and $fetchIfNotFound is true, it will then attempt to pull the name via an API lookup.
+     * Attempt to find the name of a corporation in the corporations table.
      *
      * @static
-     * @param      $id
-     * @param bool $fetchIfNotFound
+     * @param int $id
      * @return string The name of the corp if found, null otherwise.
      */
-    public static function getCorpName($id, $fetchIfNotFound = true)
+    public static function getCorpName($id)
     {
         $name = Db::queryField(
           "select corporationName from skq_corporations where corporationID = :id",
@@ -275,7 +273,7 @@ class Info
           array(":id" => $id),
           3600
         );
-        if ($name != null || $fetchIfNotFound == false) {
+        if ($name != null) {
             return $name;
         }
 
@@ -311,15 +309,13 @@ class Info
     }
 
     /**
-     * Attempt to find the name of a character in the characters table.    If not found the
-     * and $fetchIfNotFound is true, it will then attempt to pull the name via an API lookup.
+     * Attempt to find the name of a character in the characters table.
      *
      * @static
-     * @param      $id
-     * @param bool $fetchIfNotFound
+     * @param int $id
      * @return string The name of the corp if found, null otherwise.
      */
-    public static function getCharName($id, $fetchIfNotFound = false)
+    public static function getCharName($id)
     {
         $name = Db::queryField(
           "select characterName from skq_character_info where characterID = :id",
