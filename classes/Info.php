@@ -496,6 +496,7 @@ class Info
      */
     public static function getPilotDetails($id)
     {
+        $data = array();
         $data["characterID"]   = $id;
         $data["characterName"] = Info::getCharName($id, true);
         Info::addInfo($data);
