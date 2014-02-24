@@ -53,11 +53,21 @@ function updateChars()
             Log::log("Updating " . $char["characterName"]);
             $charID      = $char["characterID"];
             $keyRowID    = $char["keyRowID"];
+
+            Db::execute(
+              "update skq_character_info set lastChecked = now() where keyRowID = :keyRowID and characterID = :charID",
+              array(":keyRowID" => $keyRowID, ":charID" => $charID)
+            );
+
             $keyInfo     = Db::queryRow(
               "select * from skq_api where keyRowID = :keyRowID",
               array(":keyRowID" => $keyRowID),
               0
             );
+
+            // If we don't have any API data for this character then move on...
+            if (count($keyInfo) == 0) continue;
+
             $keyID       = $keyInfo["keyID"];
             $vCode       = $keyInfo["vCode"];
             $accessMask  = $keyInfo["accessMask"];
@@ -65,11 +75,6 @@ function updateChars()
             $arr         = array("characterID" => $charID);
             $cachedUntil = null;
             $task        = null;
-
-            Db::execute(
-              "update skq_character_info set lastChecked = now() where keyRowID = :keyRowID and characterID = :charID",
-              array(":keyRowID" => $keyRowID, ":charID" => $charID)
-            );
 
             if ($accessMask & 131072) {
                 $task        = "SkillInTraining";
