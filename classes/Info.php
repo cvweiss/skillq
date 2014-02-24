@@ -86,15 +86,9 @@ class Info
           array(":typeID" => $typeID),
           3600
         );
+
         if ($name === null) {
-            if ($typeID >= 500000) {
-                return "TypeID $typeID";
-            } //throw new Exception("hey now");
-            Db::execute(
-              "insert ignore into ccp_invTypes (typeID, typeName) values (:typeID, :typeName)",
-              array(":typeID" => $typeID, ":typeName" => "TypeID $typeID")
-            );
-            $name = "TypeID $typeID";
+            return "TypeID $typeID";
         }
 
         return $name;
@@ -285,18 +279,7 @@ class Info
             return $name;
         }
 
-        $pheal        = Util::getPheal();
-        $pheal->scope = "corp";
-        $corpInfo     = $pheal->CorporationSheet(array("corporationID" => $id));
-        $name         = $corpInfo->corporationName;
-        if ($name != null) { // addName($id, $name, 1, 2, 2);
-            Db::execute(
-              "insert ignore into skq_corporations (corporationID, name) values (:id, :name)",
-              array(":id" => $id, ":name" => $name)
-            );
-        }
-
-        return $name;
+        return "Corporation $id";
     }
 
     /**
@@ -344,22 +327,11 @@ class Info
           array(":id" => $id),
           3600
         );
-        if ($name != null || $fetchIfNotFound == false) {
+        if ($name != null) {
             return $name;
         }
 
-        $pheal        = Util::getPheal();
-        $pheal->scope = "eve";
-        $charInfo     = $pheal->CharacterInfo(array("characterid" => $id));
-        $name         = $charInfo->characterName;
-        if ($name != null) { //addName($id, $name, 1, 1, null);
-            Db::execute(
-              "insert ignore into skq_characters (characterID, name) values (:id, :name)",
-              array(":id" => $id, ":name" => $name)
-            );
-        }
-
-        return $name;
+        return "Character $id";
     }
 
     /**
@@ -459,44 +431,12 @@ class Info
     );
 
     /**
-     * Search for an entity
-     *
-     * @static
-     * @param string $search
-     * @return string
-     */
-    public static function findEntity($search)
-    {
-        $search = trim($search);
-        if (!isset($search)) {
-            return "";
-        }
-
-        $names = array();
-        for ($i = 0; $i <= 1; $i++) {
-            $match = $i == 0 ? " = " : " like ";
-            foreach (Info::$entities as $entity) {
-                $type  = $entity[0];
-                $query = $entity[1];
-                Info::findEntitySearch($names, $type, "$query $match :search limit 9", $search . ($i == 0 ? "" : "%"));
-            }
-        }
-        $retValue = array();
-        foreach ($names as $id => $value) {
-            $retValue[] = $value;
-        }
-        Info::addInfo($retValue);
-
-        return $retValue;
-    }
-
-    /**
      * @param $id
      * @return mixed
      */
     public static function getPilotDetails($id)
     {
-        $data = array();
+        $data                  = array();
         $data["characterID"]   = $id;
         $data["characterName"] = Info::getCharName($id, true);
         Info::addInfo($data);
