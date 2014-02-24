@@ -10,13 +10,15 @@ class Registration
      * @param string $username
      * @return array
      */
-    public static function checkRegistration($email, $username)
+    public static function canRegister($email, $username)
     {
-        return Db::query(
-          "SELECT username, email FROM skq_users WHERE email = :email OR username = :username",
+        $check = Db::queryField(
+          "SELECT count(*) count FROM skq_users WHERE email = :email OR username = :username",
+          "count",
           array(":email" => $email, ":username" => $username),
           0
         );
+	return $check == 0;
     }
 
     /**

@@ -27,7 +27,7 @@ if ($_POST) {
     if ($username && $email && ($password == $password2)) // woohoo
     {
         // Lets check if the user isn't already registered
-        if (Registration::checkRegistration($username, $email) == null) // He hasn't already registered, lets do et!
+        if (Registration::canRegister($username, $email)) // He hasn't already registered, lets do et!
         {
             $message = Registration::registerUser($username, $password, $email);
 
@@ -42,7 +42,9 @@ if ($_POST) {
             $app->redirect("/manage/");
 
             return $app->render("register.html", array("type" => $message["type"], "message" => $message["message"]));
-        }
+        } else {
+		return $app->render("register.html", array("type" => "error", "message" => "Unable to register with that username or email."));
+	}
     }
 }
 
