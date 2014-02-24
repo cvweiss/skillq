@@ -43,7 +43,9 @@
             "authors": [
                 {
                     "name": "Gunnar Lium",
-                    "email": "gunnar@aptoma.com"
+                    "email": "gunnar@aptoma.com",
+                    "homepage": "https://github.com/gunnarlium",
+                    "role": "Developer"
                 },
                 {
                     "name": "Joris Berthelot",
@@ -92,16 +94,16 @@
         },
         {
             "name": "cvweiss/zlibrary",
-            "version": "v0.1.1",
+            "version": "v0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/cvweiss/zlibrary.git",
-                "reference": "ea99756e7d6cce0467477d1b2f77f27de82cd047"
+                "reference": "a3a690e15c2cacee41f0fa150e6085d4efa73093"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/cvweiss/zlibrary/zipball/ea99756e7d6cce0467477d1b2f77f27de82cd047",
-                "reference": "ea99756e7d6cce0467477d1b2f77f27de82cd047",
+                "url": "https://api.github.com/repos/cvweiss/zlibrary/zipball/a3a690e15c2cacee41f0fa150e6085d4efa73093",
+                "reference": "a3a690e15c2cacee41f0fa150e6085d4efa73093",
                 "shasum": ""
             },
             "require": {
@@ -124,7 +126,7 @@
                 }
             ],
             "description": "Library of classes to simplify various tasks",
-            "time": "2014-02-20 18:01:09"
+            "time": "2014-02-23 04:32:12"
         },
         {
             "name": "pheal/pheal",
@@ -257,7 +259,7 @@
                 {
                     "name": "Andrew Smith",
                     "email": "a.smith@silentworks.co.uk",
-                    "homepage": "http://thoughts.silentworks.co.uk/"
+                    "homepage": "http://www.silentworks.co.uk/"
                 },
                 {
                     "name": "Josh Lockhart",
@@ -351,7 +353,9 @@
             "authors": [
                 {
                     "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com"
+                    "email": "fabien@symfony.com",
+                    "homepage": "http://fabien.potencier.org",
+                    "role": "Lead Developer"
                 }
             ],
             "description": "Common additional features for Twig that do not directly belong in core",
@@ -398,11 +402,14 @@
             "authors": [
                 {
                     "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com"
+                    "email": "fabien@symfony.com",
+                    "homepage": "http://fabien.potencier.org",
+                    "role": "Lead Developer"
                 },
                 {
                     "name": "Armin Ronacher",
-                    "email": "armin.ronacher@active-4.com"
+                    "email": "armin.ronacher@active-4.com",
+                    "role": "Project Founder"
                 }
             ],
             "description": "Twig, the flexible, fast, and secure template language for PHP",
