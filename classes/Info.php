@@ -5,8 +5,6 @@
  */
 class Info
 {
-    private static $maxGroupNameSize = 25;
-
     /**
      * Retrieve the system id of a solar system.
      *
@@ -40,14 +38,10 @@ class Info
 
     /**
      * @param $systemID
-     * @return int|null|string
+     * @return array
      */
     public static function getWormholeSystemInfo($systemID)
     {
-        if ($systemID < 3100000) {
-            return;
-        }
-
         return Db::queryRow(
           "select * from ccp_zwormhole_info where solarSystemID = :systemID",
           array(":systemID" => $systemID),
@@ -426,7 +420,10 @@ class Info
     }
 
     /**
-     * @param string $search
+     * @param $resultArray
+     * @param $type
+     * @param $query
+     * @param $search
      */
     private static function findEntitySearch(&$resultArray, $type, $query, $search)
     {
@@ -558,6 +555,7 @@ class Info
      */
     public static function getFactionDetails($id)
     {
+        $data              = array();
         $data["factionID"] = $id;
         Info::addInfo($data);
 
@@ -643,118 +641,117 @@ class Info
     }
 
     /**
-     * @param $element
+     * @param mixed $element
      * @return mixed
      */
     public static function addInfo(&$element)
     {
-        if ($element == null) {
-            return;
-        }
-        foreach ($element as $key => $value) {
-            if (is_array($value)) {
-                $element[$key] = Info::addInfo($value);
-            } else {
-                if ($value != 0) {
-                    switch ($key) {
-                        case "trainingEndTime":
-                            $unixTime                   = strtotime($value);
-                            $diff                       = $unixTime - time();
-                            $element["trainingSeconds"] = $diff;
-                            break;
-                        case "lastChecked":
-                            //$element["lastCheckedTime"] = date("Y-m-d H:i", $value);
-                            break;
-                        case "cachedUntil":
-                        case "queueFinishes":
-                        case "endTime":
-                            $unixTime                 = strtotime($value);
-                            $diff                     = $unixTime - time();
-                            $element["${key}Seconds"] = $diff;
-                            break;
-                        case "unix_timestamp":
-                            $element["ISO8601"]      = date("c", $value);
-                            $element["killTime"]     = date("Y-m-d H:i", $value);
-                            $element["MonthDayYear"] = date("F j, Y", $value);
-                            break;
-                        case "shipTypeID":
-                            if (!isset($element["shipName"])) {
-                                $element["shipName"] = Info::getItemName($value);
-                            }
-                            if (!isset($element["groupID"])) {
-                                $element["groupID"] = Info::getGroupID($value);
-                            }
-                            if (!isset($element["groupName"])) {
-                                $element["groupName"] = Info::getGroupName($element["groupID"]);
-                            }
-                            break;
-                        case "groupID":
-                            global $loadGroupShips; // ugh
-                            if (!isset($element["groupName"])) {
-                                $element["groupName"] = Info::getGroupName($value);
-                            }
-                            if ($loadGroupShips && !isset($element["groupShips"]) && !isset($element["noRecursion"])) {
-                                $element["groupShips"] = Db::query(
-                                  "select typeID as shipTypeID, typeName as shipName, raceID, 1 as noRecursion from ccp_invTypes where groupID = :id and published = 1 and marketGroupID is not null order by raceID, marketGroupID, typeName",
-                                  array(":id" => $value),
-                                  3600
-                                );
-                            }
-                            break;
-                        case "executorCorpID":
-                            //$element["executorCorpName"] = Info::getCorpName($value);
-                            break;
-                        case "ceoID":
-                            $element["ceoName"] = Info::getCharName($value);
-                            break;
-                        case "characterID":
-                            $element["characterName"] = Info::getCharName($value);
-                            break;
-                        case "corporationID":
-                            $element["corporationName"] = Info::getCorpName($value);
-                            break;
-                        case "allianceID":
-                            $element["allianceName"] = Info::getAlliName($value);
-                            break;
-                        case "factionID":
-                            $element["factionName"] = Info::getFactionName($value);
-                            break;
-                        case "weaponTypeID":
-                            $element["weaponTypeName"] = Info::getItemName($value);
-                            break;
-                        case "refTypeID":
-                            $element["refTypeName"] = Info::getRefTypeName($value);
-                            break;
-                        case "typeID":
-                            if (!isset($element["typeName"])) {
-                                $element["typeName"] = Info::getItemName($value);
-                            }
-                            $groupID = Info::getGroupID($value);
-                            if (!isset($element["groupID"])) {
-                                $element["groupID"] = $groupID;
-                            }
-                            if (!isset($element["groupName"])) {
-                                $element["groupName"] = Info::getGroupName($groupID);
-                            }
-                            //if (!isset($element["fittable"])) $element["fittable"] = Info::getEffectID($value) != null;
-                            break;
-                        case "level":
-                        case "trainingToLevel":
-                            $tLevels           = array("I", "II", "III", "IV", "V");
-                            $element["tLevel"] = $tLevels[$value - 1];
-                            break;
-                        case "subFlag":
-                            if ($value == 0) {
-                                $element["subStatus"] = "";
-                            }
-                            if ($value == 1) {
-                                $element["subStatus"] = "Subscription Expiring...";
-                            }
-                            if ($value == 2) {
-                                $element["subStatus"] = "Subscription Expired!";
-                            }
-                            break;
+        if ($element != null) {
+            foreach ($element as $key => $value) {
+                if (is_array($value)) {
+                    $element[$key] = Info::addInfo($value);
+                } else {
+                    if ($value != 0) {
+                        switch ($key) {
+                            case "trainingEndTime":
+                                $unixTime                   = strtotime($value);
+                                $diff                       = $unixTime - time();
+                                $element["trainingSeconds"] = $diff;
+                                break;
+                            case "lastChecked":
+                                //$element["lastCheckedTime"] = date("Y-m-d H:i", $value);
+                                break;
+                            case "cachedUntil":
+                            case "queueFinishes":
+                            case "endTime":
+                                $unixTime                 = strtotime($value);
+                                $diff                     = $unixTime - time();
+                                $element["${key}Seconds"] = $diff;
+                                break;
+                            case "unix_timestamp":
+                                $element["ISO8601"]      = date("c", $value);
+                                $element["killTime"]     = date("Y-m-d H:i", $value);
+                                $element["MonthDayYear"] = date("F j, Y", $value);
+                                break;
+                            case "shipTypeID":
+                                if (!isset($element["shipName"])) {
+                                    $element["shipName"] = Info::getItemName($value);
+                                }
+                                if (!isset($element["groupID"])) {
+                                    $element["groupID"] = Info::getGroupID($value);
+                                }
+                                if (!isset($element["groupName"])) {
+                                    $element["groupName"] = Info::getGroupName($element["groupID"]);
+                                }
+                                break;
+                            case "groupID":
+                                global $loadGroupShips; // ugh
+                                if (!isset($element["groupName"])) {
+                                    $element["groupName"] = Info::getGroupName($value);
+                                }
+                                if ($loadGroupShips && !isset($element["groupShips"]) && !isset($element["noRecursion"])) {
+                                    $element["groupShips"] = Db::query(
+                                      "select typeID as shipTypeID, typeName as shipName, raceID, 1 as noRecursion from ccp_invTypes where groupID = :id and published = 1 and marketGroupID is not null order by raceID, marketGroupID, typeName",
+                                      array(":id" => $value),
+                                      3600
+                                    );
+                                }
+                                break;
+                            case "executorCorpID":
+                                //$element["executorCorpName"] = Info::getCorpName($value);
+                                break;
+                            case "ceoID":
+                                $element["ceoName"] = Info::getCharName($value);
+                                break;
+                            case "characterID":
+                                $element["characterName"] = Info::getCharName($value);
+                                break;
+                            case "corporationID":
+                                $element["corporationName"] = Info::getCorpName($value);
+                                break;
+                            case "allianceID":
+                                $element["allianceName"] = Info::getAlliName($value);
+                                break;
+                            case "factionID":
+                                $element["factionName"] = Info::getFactionName($value);
+                                break;
+                            case "weaponTypeID":
+                                $element["weaponTypeName"] = Info::getItemName($value);
+                                break;
+                            case "refTypeID":
+                                $element["refTypeName"] = Info::getRefTypeName($value);
+                                break;
+                            case "typeID":
+                                if (!isset($element["typeName"])) {
+                                    $element["typeName"] = Info::getItemName($value);
+                                }
+                                $groupID = Info::getGroupID($value);
+                                if (!isset($element["groupID"])) {
+                                    $element["groupID"] = $groupID;
+                                }
+                                if (!isset($element["groupName"])) {
+                                    $element["groupName"] = Info::getGroupName($groupID);
+                                }
+                                //if (!isset($element["fittable"])) $element["fittable"] = Info::getEffectID($value) != null;
+                                break;
+                            case "level":
+                            case "trainingToLevel":
+                                $tLevels           = array("I", "II", "III", "IV", "V");
+                                $element["tLevel"] = $tLevels[$value - 1];
+                                break;
+                            case "subFlag":
+                                if ($value == 0) {
+                                    $element["subStatus"] = "";
+                                }
+                                if ($value == 1) {
+                                    $element["subStatus"] = "Subscription Expiring...";
+                                }
+                                if ($value == 2) {
+                                    $element["subStatus"] = "Subscription Expired!";
+                                }
+                                break;
 
+                        }
                     }
                 }
             }
