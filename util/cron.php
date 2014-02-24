@@ -45,6 +45,10 @@ function checkApis()
 
 function updateChars()
 {
+    $task = "";
+    $keyRowID = 0;
+    $charID = 0;
+    
     for ($i = 0; $i < 60; $i++) {
         $chars = Db::query(
           "select * from skq_character_info where cachedUntil < now() and display = 1 and subFlag != 2 order by lastChecked",
