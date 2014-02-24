@@ -131,9 +131,8 @@ function updateChars() {
 
 				sleep(1);
 			} catch (Exception $ex) {
-				echo "** Error with $charID during task [$task]: " . $ex->getMessage() . "\n";
-				// Recheck in a few hours
-				Db::execute("update skq_character_info set cachedUntil = date_add(now(), interval 4 hour) where keyRowID = :keyRowID and characterID = :charID", array(":keyRowID" => $keyRowID, ":charID" => $charID));
+				// Recheck in a few minutes
+				Db::execute("update skq_character_info set cachedUntil = date_add(now(), interval 15 minute) where keyRowID = :keyRowID and characterID = :charID", array(":keyRowID" => $keyRowID, ":charID" => $charID));
 				// Get the access on that key double checked
 				Db::execute("update skq_api set cachedUntil = 0 where keyRowID = :keyRowID", array(":keyRowID" => $keyRowID));
 				// do nothing for now
