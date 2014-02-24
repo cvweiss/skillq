@@ -363,7 +363,7 @@ function subscriptionCheck()
 }
 
 /**
- * @param $hours
+ * @param integer $hours
  */
 function statusCheckHours($hours)
 {

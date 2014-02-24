@@ -369,6 +369,9 @@ class Info
         return $name;
     }
 
+    /**
+     * @param string $search
+     */
     private static function findEntitySearch(&$resultArray, $type, $query, $search)
     {
         $results = Db::query("${query}", array(":search" => $search), 30);

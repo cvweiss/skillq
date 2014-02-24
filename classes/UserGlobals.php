@@ -42,7 +42,7 @@ class UserGlobals extends Twig_Extension
      * @param array  $array
      * @param string $key
      * @param mixed  $value
-     * @param null   $defaultValue
+     * @param string   $defaultValue
      */
     private function addGlobal(&$array, $key, $value, $defaultValue = null)
     {
