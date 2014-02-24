@@ -6,6 +6,7 @@ if ($_POST) {
     @$autologin = isset($_POST["autologin"]) ? 1 : 0;
     @$requesturi = $_POST["requesturi"];
 
+    $error = "An undefined error has occured....";
     if (!$username) {
         $error = "No username given";
     } elseif (!$password) {
