@@ -434,15 +434,8 @@ class Info
 
     public static function getPilotDetails($id)
     {
-        $data = Db::queryRow(
-          "select characterID, corporationID, allianceID, factionID from skq_participants where characterID = :id order by killID desc limit 1",
-          array(":id" => $id),
-          3600
-        );
-        if (sizeof($data) == 0) {
-            $data["characterID"]   = $id;
-            $data["characterName"] = Info::getCharName($id, true);
-        }
+        $data["characterID"]   = $id;
+        $data["characterName"] = Info::getCharName($id, true);
         Info::addInfo($data);
 
         return Summary::getPilotSummary($data, $id);
@@ -450,18 +443,12 @@ class Info
 
     public static function getCorpDetails($id)
     {
+
         $data = Db::queryRow(
-          "select corporationID, allianceID, factionID from skq_participants where corporationID = :id order by killID desc limit 1",
+          "select corporationID, allianceID, 0 factionID from skq_corporations where corporationID = :id",
           array(":id" => $id),
           3600
         );
-        if ($data == null || sizeof($data) == 0) {
-            $data = Db::queryRow(
-              "select corporationID, allianceID, 0 factionID from skq_corporations where corporationID = :id",
-              array(":id" => $id),
-              3600
-            );
-        }
         if ($data == null || sizeof($data) == 0) {
             $data["corporationID"] == $id;
         }
@@ -478,14 +465,8 @@ class Info
 
     public static function getAlliDetails($id)
     {
-        $data = Db::queryRow(
-          "select allianceID, factionID from skq_participants where allianceID = :id order by killID desc limit 1",
-          array(":id" => $id),
-          3600
-        );
-        if (sizeof($data) == 0) {
-            $data["allianceID"] == $id;
-        }
+        $data = array();
+        $data["allianceID"] == $id;
         // Add membercount, etc.
         $moreData = Db::queryRow("select * from skq_alliances where allianceID = :id", array(":id" => $id), 3600);
         if ($moreData) {
@@ -500,14 +481,7 @@ class Info
 
     public static function getFactionDetails($id)
     {
-        $data = Db::queryRow(
-          "select factionID from skq_participants where factionID = :id order by killID desc limit 1",
-          array(":id" => $id),
-          3600
-        );
-        if (sizeof($data) == 0) {
-            $data["factionID"] = $id;
-        }
+        $data["factionID"] = $id;
         Info::addInfo($data);
 
         return Summary::getFactionSummary($data, $id);
