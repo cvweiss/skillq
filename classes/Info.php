@@ -38,6 +38,10 @@ class Info
         );
     }
 
+    /**
+     * @param $systemID
+     * @return int|null|string
+     */
     public static function getWormholeSystemInfo($systemID)
     {
         if ($systemID < 3100000) {
@@ -133,6 +137,10 @@ class Info
         );
     }
 
+    /**
+     * @param $name
+     * @return int|null|string
+     */
     public static function getCorpId($name)
     {
         return Db::queryField(
@@ -143,6 +151,10 @@ class Info
         );
     }
 
+    /**
+     * @param $id
+     * @return int|null|string
+     */
     public static function getAlliName($id)
     {
         return Db::queryField(
@@ -153,6 +165,10 @@ class Info
         );
     }
 
+    /**
+     * @param $name
+     * @return int|null|string
+     */
     public static function getFactionId($name)
     {
         return Db::queryField(
@@ -163,11 +179,19 @@ class Info
         );
     }
 
+    /**
+     * @param $id
+     * @return int|null|string
+     */
     public static function getFactionName($id)
     {
         return Db::queryField("select name from skq_factions where factionID = :id", "name", array(":id" => $id), 3600);
     }
 
+    /**
+     * @param $id
+     * @return int|null|string
+     */
     public static function getRegionName($id)
     {
         $data = Db::queryField(
@@ -180,6 +204,10 @@ class Info
         return $data;
     }
 
+    /**
+     * @param $name
+     * @return int|null|string
+     */
     public static function getRegionID($name)
     {
         return Db::queryField(
@@ -190,6 +218,10 @@ class Info
         );
     }
 
+    /**
+     * @param $systemID
+     * @return int|null|string
+     */
     public static function getRegionIDFromSystemID($systemID)
     {
         $regionID = Db::queryField(
@@ -202,6 +234,10 @@ class Info
         return $regionID;
     }
 
+    /**
+     * @param $systemID
+     * @return int|null|string
+     */
     public static function getRegionInfoFromSystemID($systemID)
     {
         $regionID = Db::queryField(
@@ -218,6 +254,10 @@ class Info
         );
     }
 
+    /**
+     * @param $name
+     * @return int|null|string
+     */
     public static function getShipId($name)
     {
         $shipID = Db::queryField(
@@ -265,6 +305,10 @@ class Info
         return $name;
     }
 
+    /**
+     * @param $name
+     * @return int|null|string
+     */
     public static function getAlliId($name)
     {
         return Db::queryField(
@@ -275,6 +319,10 @@ class Info
         );
     }
 
+    /**
+     * @param $name
+     * @return int|null|string
+     */
     public static function getCharId($name)
     {
         return Db::queryField(
@@ -320,6 +368,10 @@ class Info
         return $name;
     }
 
+    /**
+     * @param $id
+     * @return int|null|string
+     */
     public static function getGroupID($id)
     {
         $groupID = Db::queryField(
@@ -335,6 +387,10 @@ class Info
         return $groupID;
     }
 
+    /**
+     * @param $id
+     * @return int|null|string
+     */
     public static function getGroupIdFromName($id)
     {
         $groupID = Db::queryField(
@@ -378,6 +434,11 @@ class Info
         Info::addResults($resultArray, $type, $results);
     }
 
+    /**
+     * @param $resultArray
+     * @param $type
+     * @param $results
+     */
     private static function addResults(&$resultArray, $type, $results)
     {
         foreach ($results as $result) {
@@ -432,6 +493,10 @@ class Info
         return $retValue;
     }
 
+    /**
+     * @param $id
+     * @return mixed
+     */
     public static function getPilotDetails($id)
     {
         $data["characterID"]   = $id;
@@ -441,6 +506,10 @@ class Info
         return Summary::getPilotSummary($data, $id);
     }
 
+    /**
+     * @param $id
+     * @return mixed
+     */
     public static function getCorpDetails($id)
     {
 
@@ -463,6 +532,10 @@ class Info
         return Summary::getCorpSummary($data, $id);
     }
 
+    /**
+     * @param $id
+     * @return mixed
+     */
     public static function getAlliDetails($id)
     {
         $data = array();
@@ -479,6 +552,10 @@ class Info
         return Summary::getAlliSummary($data, $id);
     }
 
+    /**
+     * @param $id
+     * @return mixed
+     */
     public static function getFactionDetails($id)
     {
         $data["factionID"] = $id;
@@ -487,6 +564,10 @@ class Info
         return Summary::getFactionSummary($data, $id);
     }
 
+    /**
+     * @param $id
+     * @return mixed
+     */
     public static function getSystemDetails($id)
     {
         $data = array("solarSystemID" => $id);
@@ -495,6 +576,10 @@ class Info
         return Summary::getSystemSummary($data, $id);
     }
 
+    /**
+     * @param $id
+     * @return mixed
+     */
     public static function getRegionDetails($id)
     {
         $data = array("regionID" => $id);
@@ -503,6 +588,10 @@ class Info
         return Summary::getRegionSummary($data, $id);
     }
 
+    /**
+     * @param $id
+     * @return mixed
+     */
     public static function getGroupDetails($id)
     {
         $data = array("groupID" => $id);
@@ -511,6 +600,10 @@ class Info
         return Summary::getGroupSummary($data, $id);
     }
 
+    /**
+     * @param $id
+     * @return mixed
+     */
     public static function getShipDetails($id)
     {
         $data = array("shipTypeID" => $id);
@@ -521,6 +614,10 @@ class Info
     }
 
 
+    /**
+     * @param $id
+     * @return array
+     */
     public static function getSystemsInRegion($id)
     {
         $result = Db::query("select solarSystemID from ccp_systems where regionID = :id", array(":id" => $id), 3600);
@@ -532,6 +629,10 @@ class Info
         return $data;
     }
 
+    /**
+     * @param $id
+     * @return int|null|string
+     */
     public static function getRefTypeName($id)
     {
         return Db::queryField(
@@ -541,6 +642,10 @@ class Info
         );
     }
 
+    /**
+     * @param $element
+     * @return mixed
+     */
     public static function addInfo(&$element)
     {
         if ($element == null) {
