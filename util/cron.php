@@ -4,335 +4,321 @@ require_once __DIR__ . "/../init.php";
 
 function clearQueue()
 {
-    for ($i = 0; $i < 60; $i++) {
-        $toClean = Db::query(
-          "select characterID from skq_character_training where trainingEndTime < now()",
-          array(),
-          0
+    $toClean = Db::query(
+      "select characterID from skq_character_training where trainingEndTime < now()",
+      array(),
+      0
+    );
+    foreach ($toClean as $clean) {
+        $charID = $clean["characterID"];
+        Db::execute(
+          "replace into skq_character_training (characterID, trainingStartTime, trainingEndTime, trainingTypeID, trainingStartSP, trainingToLevel) select characterID, startTime, endTime, typeID, startSP, level from skq_character_queue where characterID = :charID and endTime > now() order by queuePosition limit 1",
+          array(":charID" => $charID)
         );
-        foreach ($toClean as $clean) {
-            $charID = $clean["characterID"];
-            Db::execute(
-              "replace into skq_character_training (characterID, trainingStartTime, trainingEndTime, trainingTypeID, trainingStartSP, trainingToLevel) select characterID, startTime, endTime, typeID, startSP, level from skq_character_queue where characterID = :charID and endTime > now() order by queuePosition limit 1",
-              array(":charID" => $charID)
-            );
-        }
-        sleep(1);
-        return;
     }
+    sleep(1);
+    return;
 }
 
 function checkApis()
 {
-    for ($i = 0; $i < 60; $i++) {
-        $apis = Db::query(
-          "select keyRowID, keyID, vCode from skq_api where (errorCode < 200 or errorCode > 299) and cachedUntil < date_sub(now(), interval 1 hour)",
-          array(),
-          0
-        );
-        foreach ($apis as $api) {
-            try {
-                Api::processApi($api["keyRowID"], $api["keyID"], $api["vCode"]);
-                sleep(1);
-            } catch (Exception $ex) {
-                // Do nothing
-            }
+    $apis = Db::query(
+      "select keyRowID, keyID, vCode from skq_api where (errorCode < 200 or errorCode > 299) and cachedUntil < date_sub(now(), interval 1 hour)",
+      array(),
+      0
+    );
+    foreach ($apis as $api) {
+        try {
+            Api::processApi($api["keyRowID"], $api["keyID"], $api["vCode"]);
+            sleep(1);
+        } catch (Exception $ex) {
+            // Do nothing
         }
-        sleep(1);
-        return;
     }
 }
 
 function updateChars()
 {
-    $task = "";
+    $task     = "";
     $keyRowID = 0;
-    $charID = 0;
-    
-    for ($i = 0; $i < 60; $i++) {
-        $chars = Db::query(
-          "select * from skq_character_info where cachedUntil < now() and display = 1 and subFlag != 2 order by lastChecked",
-          array(),
-          0
-        );
-        foreach ($chars as $char) {
-            try {
-                Log::log("Updating " . $char["characterName"]);
-                $charID      = $char["characterID"];
-                $keyRowID    = $char["keyRowID"];
-                $keyInfo     = Db::queryRow(
-                  "select * from skq_api where keyRowID = :keyRowID",
-                  array(":keyRowID" => $keyRowID),
-                  0
-                );
-                $keyID       = $keyInfo["keyID"];
-                $vCode       = $keyInfo["vCode"];
-                $accessMask  = $keyInfo["accessMask"];
-                $pheal       = Util::getPheal($keyID, $vCode);
-                $arr         = array("characterID" => $charID);
-                $cachedUntil = null;
-                $task        = null;
+    $charID   = 0;
 
+    $chars = Db::query(
+      "select * from skq_character_info where cachedUntil < now() and display = 1 and subFlag != 2 order by lastChecked",
+      array(),
+      0
+    );
+    foreach ($chars as $char) {
+        try {
+            Log::log("Updating " . $char["characterName"]);
+            $charID      = $char["characterID"];
+            $keyRowID    = $char["keyRowID"];
+            $keyInfo     = Db::queryRow(
+              "select * from skq_api where keyRowID = :keyRowID",
+              array(":keyRowID" => $keyRowID),
+              0
+            );
+            $keyID       = $keyInfo["keyID"];
+            $vCode       = $keyInfo["vCode"];
+            $accessMask  = $keyInfo["accessMask"];
+            $pheal       = Util::getPheal($keyID, $vCode);
+            $arr         = array("characterID" => $charID);
+            $cachedUntil = null;
+            $task        = null;
+
+            Db::execute(
+              "update skq_character_info set lastChecked = now() where keyRowID = :keyRowID and characterID = :charID",
+              array(":keyRowID" => $keyRowID, ":charID" => $charID)
+            );
+
+            if ($accessMask & 131072) {
+                $task        = "SkillInTraining";
+                $t           = $pheal->charScope->SkillInTraining($arr);
+                $cachedUntil = $t->cached_until;
                 Db::execute(
-                  "update skq_character_info set lastChecked = now() where keyRowID = :keyRowID and characterID = :charID",
-                  array(":keyRowID" => $keyRowID, ":charID" => $charID)
+                  "update skq_character_skills set queue = 0, training = 0 where characterID = :charID",
+                  array(":charID" => $charID)
                 );
-
-                if ($accessMask & 131072) {
-                    $task        = "SkillInTraining";
-                    $t           = $pheal->charScope->SkillInTraining($arr);
-                    $cachedUntil = $t->cached_until;
-                    Db::execute(
-                      "update skq_character_skills set queue = 0, training = 0 where characterID = :charID",
-                      array(":charID" => $charID)
-                    );
-                    if (((int) $t->skillInTraining) == 0) {
-                        Db::execute(
-                          "delete from skq_character_training where characterID = :charID",
-                          array(":charID" => $charID)
-                        );
-                    } else {
-                        Db::execute(
-                          "replace into skq_character_training values (:charID, :startTime, :endTime, :typeID, :startSP, :destSP, :toLevel)",
-                          array(
-                            ":charID"    => $charID,
-                            ":startTime" => $t->trainingStartTime,
-                            ":endTime"   => $t->trainingEndTime,
-                            ":typeID"    => $t->trainingTypeID,
-                            ":startSP"   => $t->trainingStartSP,
-                            ":destSP"    => $t->trainingDestinationSP,
-                            ":toLevel"   => $t->trainingToLevel
-                          )
-                        );
-                    }
-                    Db::execute(
-                      "update skq_character_skills set training = :level where characterID = :charID and typeID = :typeID",
-                      array(":charID" => $charID, ":typeID" => $t->trainingTypeID, ":level" => $t->trainingToLevel)
-                    );
-                } else {
+                if (((int) $t->skillInTraining) == 0) {
                     Db::execute(
                       "delete from skq_character_training where characterID = :charID",
                       array(":charID" => $charID)
                     );
-                }
-
-                $queueFinishes = 0;
-                if ($accessMask & 262144) {
-                    $task        = "SkillQueue";
-                    $q           = $pheal->charScope->SkillQueue($arr);
-                    $cachedUntil = $q->cached_until;
-                    $queue       = $q->skillqueue;
-                    Db::execute(
-                      "delete from skq_character_queue where characterID = :charID",
-                      array(":charID" => $charID)
-                    );
-                    foreach ($queue as $qs) {
-                        $queueFinishes = max($queueFinishes, $qs->endTime);
-                        Db::execute(
-                          "insert into skq_character_queue (characterID, queuePosition, typeID, level, startSP, endSP, startTime, endTime) values
-                                                          (:charID, :qp, :typeID, :level, :startSP, :endSP, :startTime, :endTime)",
-                          array(
-                            ":charID"    => $charID,
-                            ":qp"        => $qs->queuePosition,
-                            ":typeID"    => $qs->typeID,
-                            ":level"     => $qs->level,
-                            ":startSP"   => $qs->startSP,
-                            ":endSP"     => $qs->endSP,
-                            ":startTime" => $qs->startTime,
-                            ":endTime"   => $qs->endTime
-                          )
-                        );
-                        Db::execute(
-                          "update skq_character_skills set queue = :level where characterID = :charID and typeID = :typeID",
-                          array(":charID" => $charID, ":typeID" => $qs->typeID, ":level" => $qs->level)
-                        );
-                    }
                 } else {
                     Db::execute(
-                      "delete from skq_character_queue where characterID = :charID",
-                      array(":charID" => $charID)
-                    );
-                }
-
-                if ($accessMask & 8) {
-                    $task        = "CharacterSheet";
-                    $s           = $pheal->charScope->CharacterSheet($arr);
-                    $cachedUntil = $s->cached_until;
-                    if ($s->allianceID === null) {
-                        $s->allianceID = 0;
-                    }
-                    if ($s->allianceID != 0) {
-                        Db::execute(
-                          "insert ignore into skq_alliances (allianceID, allianceName) values (:alliID, :alliName)",
-                          array(":alliID" => $s->allianceID, ":alliName" => $s->allianceName)
-                        );
-                    }
-                    Db::execute(
-                      "insert ignore into skq_corporations (corporationID, corporationName) values (:corpID, :corpName)",
-                      array(":corpID" => $s->corporationID, ":corpName" => $s->corporationName)
-                    );
-                    $cloneSP    = $s->cloneSkillPoints;
-                    $skills     = $s->skills;
-                    $skillCount = sizeof($skills);
-                    if ($char["cachedUntil"] == 0) {
-                        Db::execute(
-                          "delete from skq_character_info where keyRowID = :keyRowID and characterID = :charID",
-                          array(":keyRowID" => $keyRowID, ":charID" => $charID)
-                        );
-                    }
-                    Db::execute(
-                      "insert into skq_character_info (keyRowID, characterID, characterName, dob, corporationID, allianceID, race, bloodline, ancestry, balance, skillsTrained, cloneSkillPoints, queueFinishes)
-                                                  values (:keyRowID, :charID, :name, :dob, :corpID, :alliID, :race, :bloodline, :ancestry, :balance, :skillsTrained, :cloneSkillPoints, :queueFinishes)
-                                                  on duplicate key update corporationID = :corpID, allianceID = :alliID, balance = :balance, skillsTrained = :skillsTrained, queueFinishes = :queueFinishes, cloneSkillPoints = :cloneSkillPoints",
+                      "replace into skq_character_training values (:charID, :startTime, :endTime, :typeID, :startSP, :destSP, :toLevel)",
                       array(
-                        ":keyRowID"         => $keyRowID,
-                        ":charID"           => $charID,
-                        ":name"             => $s->name,
-                        ":corpID"           => $s->corporationID,
-                        ":alliID"           => $s->allianceID,
-                        ":race"             => $s->race,
-                        ":bloodline"        => $s->bloodLine,
-                        ":ancestry"         => $s->ancestry,
-                        ":dob"              => $s->DoB,
-                        ":balance"          => $s->balance,
-                        ":skillsTrained"    => $skillCount,
-                        ":queueFinishes"    => $queueFinishes,
-                        ":cloneSkillPoints" => $cloneSP
-                      )
-                    );
-
-                    foreach ($skills as $skill) {
-                        Db::execute(
-                          "insert into skq_character_skills (characterID, typeID, level, skillPoints) values (:charID, :typeID, :level, :skillPoints) on duplicate key update level = :level, skillPoints = :skillPoints",
-                          array(
-                            ":charID"      => $charID,
-                            ":typeID"      => $skill->typeID,
-                            ":level"       => $skill->level,
-                            ":skillPoints" => $skill->skillpoints
-                          )
-                        );
-                    }
-
-                    $attributes   = $s->attributes;
-                    $intelligence = $attributes->intelligence;
-                    $willpower    = $attributes->willpower;
-                    $memory       = $attributes->memory;
-                    $charisma     = $attributes->charisma;
-                    $perception   = $attributes->perception;
-
-                    $enhancers = $s->attributeEnhancers;
-                    @Db::execute(
-                      "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'intelligence', 1, :value, :bonus, :name)",
-                      array(
-                        ":charID" => $charID,
-                        ":value"  => $intelligence,
-                        ":bonus"  => (int) $enhancers->intelligenceBonus->augmentatorValue,
-                        ":name"   => $enhancers->intelligenceBonus->augmentatorName
-                      )
-                    );
-                    @Db::execute(
-                      "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'willpower', 2, :value, :bonus, :name)",
-                      array(
-                        ":charID" => $charID,
-                        ":value"  => $willpower,
-                        ":bonus"  => (int) $enhancers->willpowerBonus->augmentatorValue,
-                        ":name"   => $enhancers->willpowerBonus->augmentatorName
-                      )
-                    );
-                    @Db::execute(
-                      "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'memory', 3, :value, :bonus, :name)",
-                      array(
-                        ":charID" => $charID,
-                        ":value"  => $memory,
-                        ":bonus"  => (int) $enhancers->memoryBonus->augmentatorValue,
-                        ":name"   => $enhancers->memoryBonus->augmentatorName
-                      )
-                    );
-                    @Db::execute(
-                      "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'charisma', 4, :value, :bonus, :name)",
-                      array(
-                        ":charID" => $charID,
-                        ":value"  => $charisma,
-                        ":bonus"  => (int) $enhancers->charismaBonus->augmentatorValue,
-                        ":name"   => $enhancers->charismaBonus->augmentatorName
-                      )
-                    );
-                    @Db::execute(
-                      "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'perception', 5, :value, :bonus, :name)",
-                      array(
-                        ":charID" => $charID,
-                        ":value"  => $perception,
-                        ":bonus"  => (int) $enhancers->perceptionBonus->augmentatorValue,
-                        ":name"   => $enhancers->perceptionBonus->augmentatorName
+                        ":charID"    => $charID,
+                        ":startTime" => $t->trainingStartTime,
+                        ":endTime"   => $t->trainingEndTime,
+                        ":typeID"    => $t->trainingTypeID,
+                        ":startSP"   => $t->trainingStartSP,
+                        ":destSP"    => $t->trainingDestinationSP,
+                        ":toLevel"   => $t->trainingToLevel
                       )
                     );
                 }
+                Db::execute(
+                  "update skq_character_skills set training = :level where characterID = :charID and typeID = :typeID",
+                  array(":charID" => $charID, ":typeID" => $t->trainingTypeID, ":level" => $t->trainingToLevel)
+                );
+            } else {
+                Db::execute(
+                  "delete from skq_character_training where characterID = :charID",
+                  array(":charID" => $charID)
+                );
+            }
 
-                if ($cachedUntil == null) {
+            $queueFinishes = 0;
+            if ($accessMask & 262144) {
+                $task        = "SkillQueue";
+                $q           = $pheal->charScope->SkillQueue($arr);
+                $cachedUntil = $q->cached_until;
+                $queue       = $q->skillqueue;
+                Db::execute(
+                  "delete from skq_character_queue where characterID = :charID",
+                  array(":charID" => $charID)
+                );
+                foreach ($queue as $qs) {
+                    $queueFinishes = max($queueFinishes, $qs->endTime);
                     Db::execute(
-                      "update skq_character_info set cachedUntil = date_add(now(), interval 2 hour) where keyRowID = :keyRowID and characterID = :charID",
+                      "insert into skq_character_queue (characterID, queuePosition, typeID, level, startSP, endSP, startTime, endTime) values
+                                                      (:charID, :qp, :typeID, :level, :startSP, :endSP, :startTime, :endTime)",
+                      array(
+                        ":charID"    => $charID,
+                        ":qp"        => $qs->queuePosition,
+                        ":typeID"    => $qs->typeID,
+                        ":level"     => $qs->level,
+                        ":startSP"   => $qs->startSP,
+                        ":endSP"     => $qs->endSP,
+                        ":startTime" => $qs->startTime,
+                        ":endTime"   => $qs->endTime
+                      )
+                    );
+                    Db::execute(
+                      "update skq_character_skills set queue = :level where characterID = :charID and typeID = :typeID",
+                      array(":charID" => $charID, ":typeID" => $qs->typeID, ":level" => $qs->level)
+                    );
+                }
+            } else {
+                Db::execute(
+                  "delete from skq_character_queue where characterID = :charID",
+                  array(":charID" => $charID)
+                );
+            }
+
+            if ($accessMask & 8) {
+                $task        = "CharacterSheet";
+                $s           = $pheal->charScope->CharacterSheet($arr);
+                $cachedUntil = $s->cached_until;
+                if ($s->allianceID === null) {
+                    $s->allianceID = 0;
+                }
+                if ($s->allianceID != 0) {
+                    Db::execute(
+                      "insert ignore into skq_alliances (allianceID, allianceName) values (:alliID, :alliName)",
+                      array(":alliID" => $s->allianceID, ":alliName" => $s->allianceName)
+                    );
+                }
+                Db::execute(
+                  "insert ignore into skq_corporations (corporationID, corporationName) values (:corpID, :corpName)",
+                  array(":corpID" => $s->corporationID, ":corpName" => $s->corporationName)
+                );
+                $cloneSP    = $s->cloneSkillPoints;
+                $skills     = $s->skills;
+                $skillCount = sizeof($skills);
+                if ($char["cachedUntil"] == 0) {
+                    Db::execute(
+                      "delete from skq_character_info where keyRowID = :keyRowID and characterID = :charID",
                       array(":keyRowID" => $keyRowID, ":charID" => $charID)
                     );
-                } else {
+                }
+                Db::execute(
+                  "insert into skq_character_info (keyRowID, characterID, characterName, dob, corporationID, allianceID, race, bloodline, ancestry, balance, skillsTrained, cloneSkillPoints, queueFinishes)
+                                              values (:keyRowID, :charID, :name, :dob, :corpID, :alliID, :race, :bloodline, :ancestry, :balance, :skillsTrained, :cloneSkillPoints, :queueFinishes)
+                                              on duplicate key update corporationID = :corpID, allianceID = :alliID, balance = :balance, skillsTrained = :skillsTrained, queueFinishes = :queueFinishes, cloneSkillPoints = :cloneSkillPoints",
+                  array(
+                    ":keyRowID"         => $keyRowID,
+                    ":charID"           => $charID,
+                    ":name"             => $s->name,
+                    ":corpID"           => $s->corporationID,
+                    ":alliID"           => $s->allianceID,
+                    ":race"             => $s->race,
+                    ":bloodline"        => $s->bloodLine,
+                    ":ancestry"         => $s->ancestry,
+                    ":dob"              => $s->DoB,
+                    ":balance"          => $s->balance,
+                    ":skillsTrained"    => $skillCount,
+                    ":queueFinishes"    => $queueFinishes,
+                    ":cloneSkillPoints" => $cloneSP
+                  )
+                );
+
+                foreach ($skills as $skill) {
                     Db::execute(
-                      "update skq_character_info set cachedUntil = greatest(:cachedUntil, date_add(now(), interval 1 hour)) where keyRowID = :keyRowID and characterID = :charID",
-                      array(":cachedUntil" => $cachedUntil, ":keyRowID" => $keyRowID, ":charID" => $charID)
+                      "insert into skq_character_skills (characterID, typeID, level, skillPoints) values (:charID, :typeID, :level, :skillPoints) on duplicate key update level = :level, skillPoints = :skillPoints",
+                      array(
+                        ":charID"      => $charID,
+                        ":typeID"      => $skill->typeID,
+                        ":level"       => $skill->level,
+                        ":skillPoints" => $skill->skillpoints
+                      )
                     );
                 }
 
-                sleep(1);
-            } catch (Exception $ex) {
-                Log::log("Error with task $task");
-                // Recheck in a few minutes
+                $attributes   = $s->attributes;
+                $intelligence = $attributes->intelligence;
+                $willpower    = $attributes->willpower;
+                $memory       = $attributes->memory;
+                $charisma     = $attributes->charisma;
+                $perception   = $attributes->perception;
+
+                $enhancers = $s->attributeEnhancers;
+                @Db::execute(
+                  "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'intelligence', 1, :value, :bonus, :name)",
+                  array(
+                    ":charID" => $charID,
+                    ":value"  => $intelligence,
+                    ":bonus"  => (int) $enhancers->intelligenceBonus->augmentatorValue,
+                    ":name"   => $enhancers->intelligenceBonus->augmentatorName
+                  )
+                );
+                @Db::execute(
+                  "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'willpower', 2, :value, :bonus, :name)",
+                  array(
+                    ":charID" => $charID,
+                    ":value"  => $willpower,
+                    ":bonus"  => (int) $enhancers->willpowerBonus->augmentatorValue,
+                    ":name"   => $enhancers->willpowerBonus->augmentatorName
+                  )
+                );
+                @Db::execute(
+                  "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'memory', 3, :value, :bonus, :name)",
+                  array(
+                    ":charID" => $charID,
+                    ":value"  => $memory,
+                    ":bonus"  => (int) $enhancers->memoryBonus->augmentatorValue,
+                    ":name"   => $enhancers->memoryBonus->augmentatorName
+                  )
+                );
+                @Db::execute(
+                  "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'charisma', 4, :value, :bonus, :name)",
+                  array(
+                    ":charID" => $charID,
+                    ":value"  => $charisma,
+                    ":bonus"  => (int) $enhancers->charismaBonus->augmentatorValue,
+                    ":name"   => $enhancers->charismaBonus->augmentatorName
+                  )
+                );
+                @Db::execute(
+                  "replace into skq_character_implants (characterID, attributeName, attributeID, baseValue, bonus, implantName) values (:charID, 'perception', 5, :value, :bonus, :name)",
+                  array(
+                    ":charID" => $charID,
+                    ":value"  => $perception,
+                    ":bonus"  => (int) $enhancers->perceptionBonus->augmentatorValue,
+                    ":name"   => $enhancers->perceptionBonus->augmentatorName
+                  )
+                );
+            }
+
+            if ($cachedUntil == null) {
                 Db::execute(
-                  "update skq_character_info set cachedUntil = date_add(now(), interval 15 minute) where keyRowID = :keyRowID and characterID = :charID",
+                  "update skq_character_info set cachedUntil = date_add(now(), interval 2 hour) where keyRowID = :keyRowID and characterID = :charID",
                   array(":keyRowID" => $keyRowID, ":charID" => $charID)
                 );
-                // Get the access on that key double checked
+            } else {
                 Db::execute(
-                  "update skq_api set cachedUntil = 0 where keyRowID = :keyRowID",
-                  array(":keyRowID" => $keyRowID)
+                  "update skq_character_info set cachedUntil = greatest(:cachedUntil, date_add(now(), interval 1 hour)) where keyRowID = :keyRowID and characterID = :charID",
+                  array(":cachedUntil" => $cachedUntil, ":keyRowID" => $keyRowID, ":charID" => $charID)
                 );
-                // do nothing for now
-                sleep(1);
             }
+
+            sleep(1);
+        } catch (Exception $ex) {
+            Log::log("Error with task $task");
+            // Recheck in a few minutes
+            Db::execute(
+              "update skq_character_info set cachedUntil = date_add(now(), interval 15 minute) where keyRowID = :keyRowID and characterID = :charID",
+              array(":keyRowID" => $keyRowID, ":charID" => $charID)
+            );
+            // Get the access on that key double checked
+            Db::execute(
+              "update skq_api set cachedUntil = 0 where keyRowID = :keyRowID",
+              array(":keyRowID" => $keyRowID)
+            );
+            // do nothing for now
+            sleep(1);
         }
-        sleep(1);
-        return;
     }
 }
 
 function sendEmails()
 {
-    for ($i = 0; $i < 60; $i++) {
-        $emails = Db::query("select * from skq_emails where isSent = 0", array(), 0);
-        foreach ($emails as $email) {
-            $emailID = $email["emailID"];
-            $to      = $email["recipient"];
-            $subject = $email["subject"];
-            $body    = $email["content"];
+    $emails = Db::query("select * from skq_emails where isSent = 0", array(), 0);
+    foreach ($emails as $email) {
+        $emailID = $email["emailID"];
+        $to      = $email["recipient"];
+        $subject = $email["subject"];
+        $body    = $email["content"];
 
-            $mail = new PHPMailer();
-            $mail->SetFrom('noreply@skillq.net', "SkillQ");
-            $mail->AddReplyTo("noreply@skillq.net", "SkillQ");
-            $mail->AddAddress($to);
-            $mail->Subject = $subject;
-            //$mail->Body = $body;
-            $mail->MsgHTML($body);
-            if ($mail->Send()) {
-                Db::execute(
-                  "update skq_emails set isSent = 1, sentTime = now() where emailID = :emailID",
-                  array(":emailID" => $emailID)
-                );
-            } else {
-                Db::execute(
-                  "update skq_emails set isSent = -1 where emailID = :emailID",
-                  array(":emailID" => $emailID)
-                );
-            }
+        $mail = new PHPMailer();
+        $mail->SetFrom('noreply@skillq.net', "SkillQ");
+        $mail->AddReplyTo("noreply@skillq.net", "SkillQ");
+        $mail->AddAddress($to);
+        $mail->Subject = $subject;
+        //$mail->Body = $body;
+        $mail->MsgHTML($body);
+        if ($mail->Send()) {
+            Db::execute(
+              "update skq_emails set isSent = 1, sentTime = now() where emailID = :emailID",
+              array(":emailID" => $emailID)
+            );
+        } else {
+            Db::execute(
+              "update skq_emails set isSent = -1 where emailID = :emailID",
+              array(":emailID" => $emailID)
+            );
         }
-        sleep(1);
-        return;
     }
 }
 
