@@ -53,7 +53,8 @@ if (isset($action) && isset($id)) {
 
 $apis      = Db::query(
   "select * from skq_api where userID = :userID order by keyID",
-  array(":userID" => User::getUserID())
+  array(":userID" => User::getUserID()),
+  0
 );
 $keyRowIDs = array();
 foreach ($apis as $api) {
