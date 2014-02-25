@@ -468,7 +468,7 @@ function statusCheckHours($hours)
 function updateWallet()
 {
     $result = Db::query(
-      "select keyRowID, characterID from skq_character_info where display = 1 and walletCachedUntil < now()",
+      "select keyRowID, characterID from skq_character_info where display = 1 and subFlag != 2 and walletCachedUntil < now()",
       array(),
       0
     );
@@ -478,6 +478,14 @@ function updateWallet()
           "select keyID, vCode, accessMask from skq_api where keyRowID = :keyRowID",
           array(":keyRowID" => $row["keyRowID"])
         );
+
+	if (count($api) == 0) {
+		Db::execute("update skq_character_info set walletCachedUntil = date_add(now(), interval 12 hour) where keyRowID = :keyRowID",
+			array(":keyRowID" => $row["keyRowID"])
+		);
+		continue; // No API on record, move along
+	}
+
         $keyID      = $api["keyID"];
         $vCode      = $api["vCode"];
         $accessMask = $api["accessMask"];
