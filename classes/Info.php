@@ -571,7 +571,7 @@ class Info
     public static function getRefTypeName($id)
     {
         return Db::queryField(
-          "select refTypeName from api_refTypes where refTypeID = :id",
+          "select refTypeName from ccp_api_refTypes where refTypeID = :id",
           "refTypeName",
           array(":id" => $id)
         );
