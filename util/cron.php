@@ -330,7 +330,7 @@ function sendEmails()
 function statusCheck()
 {
     // Check for queues going to end in the next 24 hours
-    Db::execute("delete from skq_email_history where eventTime < date_sub(now(), interval 24 hour)");
+    Db::execute("delete from skq_email_history where expireTime < now()");
     statusCheckHours(24);
     statusCheckHours(6);
 }
@@ -389,11 +389,12 @@ function statusCheckHours($hours)
             if ($count == 0) {
                 CreateEmail::create($email, $subject, $body);
                 Db::execute(
-                  "insert into skq_email_history (email, event) values (:email, :event)",
+                  "insert into skq_email_history (email, event, expireTime) values (:email, :event, date_add(now(), interval 24 hour))",
                   array(":email" => $email, ":event" => $event)
                 );
             }
         } catch (Exception $ex) {
+print_r($ex);
             continue;
         }
     }
@@ -435,34 +436,15 @@ function statusCheckHours($hours)
             if ($count == 0) {
                 CreateEmail::create($email, $subject, $body);
                 Db::execute(
-                  "insert into skq_email_history (email, event) values (:email, :event)",
+                  "insert into skq_email_history (email, event, expireTime) values (:email, :event, date_add(now(), interval 7 day))",
                   array(":email" => $email, ":event" => $event)
                 );
             }
         } catch (Exception $ex) {
+	    print_r($ex);
             continue;
         }
     }
-    /*$queues = Db::query("select * from skq_character_info where queueFinishes < now() and queueFinishes > date_sub(now(), interval 24 hour)");
-      foreach($queues as $queue) {
-    // Need to get the user info
-    $name = $queue["characterName"];
-    $api = Db::queryRow("select * from skq_api where keyRowID = :keyRowID", array(":keyRowID" => $queue["keyRowID"]));
-    $userID = $api["userID"];
-    $userInfo = Db::queryRow("select * from skq_users where id = :userID", array(":userID" => $userID));
-    $email = $userInfo["email"];
-    $subject = "$name skill notification - WARNING!";
-    global $siteName;
-    $url = "http://skillq.net/char/" . urlencode($name);
-    $body = "Your character, <a href='$url'>$name</a>, is not training any skills!<br/><br/>-- SkillQ.net";
-    $event = "24hrQ:$name";
-    try {
-    Db::execute("insert into skq_email_history (email, event) values (:email, :event)", array(":email" => $email, ":event" => $event));
-    CreateEmail::create($email, $subject, $body);
-    } catch (Exception $ex) {
-    continue;
-    }
-    }*/
 }
 
 function updateWallet()
