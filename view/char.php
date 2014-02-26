@@ -133,7 +133,7 @@ if ($pageType == "train") {
 
 Info::addInfo($charInfo);
 $charInfo["nameEncoded"] = urlencode($charInfo["characterName"]);
-$training["typeID"]      = $training["trainingTypeID"];
+$training["typeID"]      = isset($training["trainingTypeID"]) ? $training["trainingTypeID"] : 0;
 Info::addInfo($training);
 Info::addInfo($skills);
 Info::addInfo($queue);
