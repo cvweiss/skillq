@@ -672,9 +672,14 @@ class Info
                                 //if (!isset($element["fittable"])) $element["fittable"] = Info::getEffectID($value) != null;
                                 break;
                             case "level":
+			    case "requiredSkillLevel":
                             case "trainingToLevel":
                                 $tLevels           = array("I", "II", "III", "IV", "V");
                                 $element["tLevel"] = $tLevels[$value - 1];
+                                break;
+			    case "neededLevel":
+                                $tLevels           = array("I", "II", "III", "IV", "V");
+                                $element["neededLevel"] = $tLevels[$value - 1];
                                 break;
                             case "subFlag":
                                 if ($value == 0) {

@@ -80,3 +80,10 @@ $app->get("/shares/action/:action/:id/", function($action, $id) use ($app) {
     global $cookie_name, $cookie_time;
 	include( "view/shares.php" );
 });
+
+// EveInfo
+$app->get("/item/:id/", function($id) use ($app) {
+    global $oracleURL;
+    include ("view/item.php" );
+});
+

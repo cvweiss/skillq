@@ -11,7 +11,7 @@
                 <tbody>
 {% for skill in queue %}
                 <tr>
-                        <td>{{ skill.typeName }} {{ skill.tLevel }}</td>
+                        <td>{% set field = skill %}{% include 'components/text_item.html' %}</td>
                         <td>{{ skill.groupName }}</td>
                         <td style="width: 10em;">{{ skill.startTime }}</td>
                         <td style="width: 10em;">{{ skill.endTime }}</td>
@@ -23,7 +23,7 @@
 <div class="row visible-phone">
         {% for skill in queue %}
                 <table class="table table-condensed table-striped table-hover table-bordered">
-                        <tr><th>Skill</th><td>{{ skill.typeName }} {{ skill.tLevel }}</td></tr>
+                        <tr><th>Skill</th><td>{% set field = skill %}{% include 'components/text_item.html' %}</td></tr>
                         <tr><th>Group</th><td>{{ skill.groupName }}</td></tr>
                         <tr><th>Starts</th><td>{{ skill.startTime }}</td></tr>
                         <tr><th>Ends</th><td>{{ skill.endTime }}</td></tr>
@@ -64,7 +64,7 @@
                 <tbody>
         {% endif %}
         <tr class="skillGroup{{skill.groupID}} hide level{{ skill.level }} skill">
-            <td class=""><i class="icon-minus"></i> {{ skill.typeName }}
+            <td class=""><i class="icon-minus"></i> {% set field = skill %} {% include 'components/text_item.html' %}
                         {% if skill.skillPoints %}
                                 <em style="font-size: 75%">{{ skill.skillPoints|number_format(0)}} SP</em>
                         {% endif %}

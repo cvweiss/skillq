@@ -25,7 +25,7 @@
 									<strong><a href="/char/{{ char.characterName|url_encode }}">{{ char.characterName }}</a></strong><br/>
 									{{ char.balance|number_format(2) }} ISK<br/>
 									{% if char.typeName and char.subStatus != 'Subscription Expired' %}
-										{{ char.typeName }} {{ char.tLevel }}<br/>
+										{% set field = char %} {% include 'components/text_item.html' %}<br/>
 										<span id="countdown{{char.characterID}}">{{ char.trainingEndTime }}</span><br/>
 										<span id="cache{{char.characterID}}"></span>
 										{% if char.queueFinishesSeconds < 86400 and char.queueFinishesSeconds > 0 %}

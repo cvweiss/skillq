@@ -33,7 +33,7 @@
 	{% for time, rows in skillTrain %}
 		{% for row in rows %}
 		<tr class="level{{ row.level }} skill">
-			<td><i class="icon-minus"></i>{{ row.typeName }} {% if row.skillPoints %}<small><em>{{ row.skillPoints|number_format(0) }} SP</em></small>{% endif %}</td>
+			<td><i class="icon-minus"></i>{% set field = row %} {% include 'components/text_item.html' %} {% if row.skillPoints %}<small><em>{{ row.skillPoints|number_format(0) }} SP</em></small>{% endif %}</td>
 			<td>
 				{% if row.training > 0 %}<img src="/img/skills/level{{ row.training }}_t.gif"/>
 				{% elseif row.queue > 0 %}<img src="/img/skills/level{{ row.queue }}_q.gif"/>

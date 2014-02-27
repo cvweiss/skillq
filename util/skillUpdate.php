@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . "../init.php";
+require_once __DIR__ . "/../init.php";
 
 $skills = Db::query("select typeID from skq_skill_attributes", array(), 0);
 foreach ($skills as $skill) {

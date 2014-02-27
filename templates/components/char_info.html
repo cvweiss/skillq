@@ -15,7 +15,7 @@
                         {% if char.allianceID %}{{ char.allianceName }}<br/>{% endif %}
                         {{ char.balance|number_format(2) }} ISK<br/>
                         {% if training.typeName and char.subStatus != 'Subscription Expired' %}
-                                {{ training.typeName }} {{ training.tLevel }}<br/>
+                                {% set field = training %} {% include 'components/text_item.html' %}<br/>
                                 <span id="countdown">{{ training.trainingEndTime }}</span><br/>
                                 {% if queueFinishes < 86400 %}
                                 <p class="text-error">Empty Queue: <span id="queueTime"></span></p>

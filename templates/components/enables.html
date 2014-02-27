@@ -1,0 +1,11 @@
+{% set neededLevel = -1 %}
+{% for enabled in enables %}
+	{% if neededLevel != enabled.neededLevel %}
+		<strong>{{ info.typeName }} {{ enabled.neededLevel }}</strong><br/>
+		{% set neededLevel = enabled.neededLevel %}
+	{% endif %}
+	{% set imageSize = 32 %}
+	{% set field = enabled %}
+	{% include 'components/image_item.html' %}
+	{% include 'components/text_item.html' %}<br/><br/>
+{% endfor %}
