@@ -26,11 +26,12 @@
 									{{ char.balance|number_format(2) }} ISK<br/>
 									{% if char.typeName and char.subStatus != 'Subscription Expired' %}
 										{% set field = char %} {% include 'components/text_item.html' %}<br/>
-										<span id="countdown{{char.characterID}}">{{ char.trainingEndTime }}</span><br/>
 										<span id="cache{{char.characterID}}"></span>
 										{% if char.queueFinishesSeconds < 86400 and char.queueFinishesSeconds > 0 %}
 											{% set qf = true %}
-											<p class="text-error">Skill Queue: <span id="queueTime{{ char.characterID }}"></span></p>
+											<p class="text-error">Empty Queue: <span id="queueTime{{ char.characterID }}"></span></p>
+										{% else %}
+											<span id="countdown{{char.characterID}}">{{ char.trainingEndTime }}</span><br/>
 										{% endif %}
 										<script type="text/javascript">
 											$(function () {
