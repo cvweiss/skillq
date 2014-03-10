@@ -1,5 +1,8 @@
 <?php
 
+$config = array();
+require_once("view/components/config.php");
+
 if (isset($bypassLogin)) {
     $charInfo = Db::queryRow(
       "select * from skq_character_info i where characterName = :name",
@@ -176,7 +179,8 @@ $app->render(
     "wallet"        => $wallet,
     "pageType"      => $pageType,
     "isShare"       => $isShare,
-    "skillTrain"    => $skillTrain
+    "skillTrain"    => $skillTrain,
+    "config"        => $config
   )
 );
 
