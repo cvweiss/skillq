@@ -1,7 +1,7 @@
 <?php
 
 $config      = array();
-$pageRefresh = 3600;
+$pageRefresh = 0;
 $chars       = null;
 if (User::isLoggedIn()) {
     $chars = Db::query(
