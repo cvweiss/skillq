@@ -306,14 +306,7 @@ function sendEmails()
         $subject = $email["subject"];
         $body    = $email["content"];
 
-        $mail = new PHPMailer();
-        $mail->SetFrom('noreply@skillq.net', "SkillQ");
-        $mail->AddReplyTo("noreply@skillq.net", "SkillQ");
-        $mail->AddAddress($to);
-        $mail->Subject = $subject;
-        //$mail->Body = $body;
-        $mail->MsgHTML($body);
-        if ($mail->Send()) {
+        if (Email::send($to, $subject, $body)) {
             Db::execute(
               "update skq_emails set isSent = 1, sentTime = now() where emailID = :emailID",
               array(":emailID" => $emailID)
