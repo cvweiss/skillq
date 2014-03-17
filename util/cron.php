@@ -468,7 +468,7 @@ function updateWallet()
     foreach ($result as $row) {
         $charID = $row["characterID"];
         $api    = Db::queryRow(
-          "select keyID, vCode, accessMask from skq_api where keyRowID = :keyRowID",
+          "select keyID, vCode, accessMask from skq_api where keyRowID = :keyRowID and (expires is null or expires > now())",
           array(":keyRowID" => $row["keyRowID"])
         );
 
