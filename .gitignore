@@ -5,3 +5,4 @@ notes
 vendor
 .idea
 composer.lock
+public/google*.html
