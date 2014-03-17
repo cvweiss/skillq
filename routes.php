@@ -34,6 +34,16 @@ $app->get("/logout/", function() use ($app) {
     include( "view/logout.php" );
 });
 
+// Forgot password
+$app->get("/forgotpassword/", function() use ($app) {
+    global $cookie_name, $cookie_time;
+    include( "view/forgotpassword.php" );
+});
+$app->post("/forgotpassword/", function() use ($app) {
+    global $cookie_name, $cookie_time;
+    include( "view/forgotpassword.php" );
+});
+
 // Management
 $app->get("/manage/", function() use ($app) {
     global $cookie_name, $cookie_time;
@@ -79,6 +89,13 @@ $app->post("/shares/", function() use ($app) {
 $app->get("/shares/action/:action/:id/", function($action, $id) use ($app) {
     global $cookie_name, $cookie_time;
 	include( "view/shares.php" );
+});
+
+$app->get("/resetpassword/:hash/", function($hash) use ($app) {
+	include( "view/resetpassword.php" );
+});
+$app->post("/resetpassword/", function() use ($app) {
+	include( "view/resetpassword.php" );
 });
 
 // EveInfo
