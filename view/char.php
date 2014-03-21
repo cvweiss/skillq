@@ -148,7 +148,7 @@ foreach ($queue as $skill) {
 $pageRefresh = 3600;
 @$seconds = $charInfo["cachedUntilSeconds"];
 if ($seconds > 0) {
-    $pageRefresh = $seconds;
+    $pageRefresh = min($pageRefresh, $seconds);
 }
 
 $totalSP = 0;

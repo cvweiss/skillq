@@ -60,7 +60,7 @@ function updateChars()
             );
 
             $keyInfo = Db::queryRow(
-              "select * from skq_api where keyRowID = :keyRowID and (expires is null or expires > now())",
+              "select * from skq_api where keyRowID = :keyRowID and errorCode = 0 and (expires is null or expires > now())",
               array(":keyRowID" => $keyRowID),
               0
             );
@@ -129,7 +129,7 @@ function updateChars()
                 if ($accessMask & 262144) {
                     $task        = "SkillQueue";
                     $q           = $pheal->charScope->SkillQueue($arr);
-                    $cachedUntil = $q->cached_until;
+                    $cachedUntil = $cachedUntil < $q->cached_until ? $cachedUntil : $q->cached_until;
                     $queue       = $q->skillqueue;
                     Db::execute(
                       "delete from skq_character_queue where characterID = :charID",
@@ -170,7 +170,7 @@ function updateChars()
                 if ($accessMask & 8) {
                     $task        = "CharacterSheet";
                     $s           = $pheal->charScope->CharacterSheet($arr);
-                    $cachedUntil = $s->cached_until;
+                    $cachedUntil = $cachedUntil < $s->cached_until ? $cachedUntil : $s->cached_until;
                     if ($s->allianceID === null) {
                         $s->allianceID = 0;
                     }
@@ -283,7 +283,6 @@ function updateChars()
             } catch (Exception $ex) {
                 Log::log("Unable to fetch CharacterSheet: " . $ex->getMessage());
             }
-
             if ($cachedUntil == null) {
                 Db::execute(
                   "update skq_character_info set cachedUntil = date_add(now(), interval 2 hour) where keyRowID = :keyRowID and characterID = :charID",
@@ -291,7 +290,7 @@ function updateChars()
                 );
             } else {
                 Db::execute(
-                  "update skq_character_info set cachedUntil = greatest(:cachedUntil, date_add(now(), interval 1 hour)) where keyRowID = :keyRowID and characterID = :charID",
+                  "update skq_character_info set cachedUntil = :cachedUntil where keyRowID = :keyRowID and characterID = :charID",
                   array(":cachedUntil" => $cachedUntil, ":keyRowID" => $keyRowID, ":charID" => $charID)
                 );
             }
@@ -468,7 +467,7 @@ function updateWallet()
     foreach ($result as $row) {
         $charID = $row["characterID"];
         $api    = Db::queryRow(
-          "select keyID, vCode, accessMask from skq_api where keyRowID = :keyRowID and (expires is null or expires > now())",
+          "select keyID, vCode, accessMask from skq_api where keyRowID = :keyRowID and errorCode = 0 and (expires is null or expires > now())",
           array(":keyRowID" => $row["keyRowID"])
         );
 
