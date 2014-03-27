@@ -13,8 +13,9 @@ if ($_POST) {
 			$id = $account["id"];
 			$email = $account["email"];
 			$hash = gen_uuid();
+			$username = $account["username"];
 			Db::execute("update skq_users set change_hash = :hash, change_expiration = date_add(now(), interval 2 day) where id = :id", array(":id" => $id, ":hash" => $hash));
-			Email::send($email, "SkillQ - Password reset", "A password reset has been requested for your account at the email $email, if you did this, click <a href='http://skillq.net/resetpassword/$hash'>here</a> to reset your password.  If you didn't do this, then do nothing at all and your account will remain unchanged.<br/><br/>Thank you,<br/>SkillQ");
+			Email::send($email, "SkillQ - Password reset", "A password reset has been requested for your account at the email $email, if you did this, click <a href='http://skillq.net/resetpassword/$hash'>here</a> to reset your password.  If you didn't do this, then do nothing at all and your account will remain unchanged.<br/><br/>Thank you,<br/>SkillQ<br/><br/>PS: In case you forgot your user name: $username");
 		}
 		$error = "A password reset has been emailed to $email";
         } else {
