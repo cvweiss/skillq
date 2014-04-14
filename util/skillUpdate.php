@@ -2,6 +2,9 @@
 
 require_once __DIR__ . "/../init.php";
 
+// Populate the skill attributes table
+Db::execute("insert ignore into skq_skill_attributes (typeID) select typeID from ccp_invTypes");
+
 $skills = Db::query("select typeID from skq_skill_attributes", array(), 0);
 foreach ($skills as $skill) {
     $typeID     = $skill["typeID"];
@@ -86,3 +89,6 @@ foreach ($skills as $skill) {
       )
     );
 }
+
+// Remove typeIDs that have no skill requirements
+Db::execute("delete from skq_skill_attributes where requiredSkillLevel1 is null and requiredSkillLevel2 is null and requiredSkillLevel3 is null");
