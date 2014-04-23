@@ -3,7 +3,8 @@
 require_once __DIR__ . "/../init.php";
 
 // Populate the skill attributes table
-Db::execute("insert ignore into skq_skill_attributes (typeID) select typeID from ccp_invTypes");
+Db::execute("truncate skq_skill_attributes");
+Db::execute("insert ignore into skq_skill_attributes (typeID) select typeID from ccp_invTypes where published = 1");
 
 $skills = Db::query("select typeID from skq_skill_attributes", array(), 0);
 foreach ($skills as $skill) {
