@@ -22,6 +22,7 @@ function clearQueue()
 
 function checkApis()
 {
+    Db::execute("update skq_api set errorCode = 0 where errorCode = 221 and lastValidation < date_sub(now(), interval 6 hour)");
     $apis = Db::query(
       "select keyRowID, keyID, vCode from skq_api where (errorCode < 200 or errorCode > 299) and cachedUntil < date_sub(now(), interval 1 hour)",
       array(),
@@ -323,7 +324,15 @@ function sendEmails()
         $subject = $email["subject"];
         $body    = $email["content"];
 
-        if (Email::send($to, $subject, $body)) {
+        $mail = new PHPMailer();
+         $mail->SetFrom('noreply@skillq.net', "SkillQ");
+         $mail->AddReplyTo("noreply@skillq.net", "SkillQ");
+         $mail->AddAddress($to);
+         $mail->Subject = $subject;
+         //$mail->Body = $body;
+         $mail->MsgHTML($body);
+         if ($mail->Send()) {
+        //if (Email::send($to, $subject, $body)) {
             Db::execute(
               "update skq_emails set isSent = 1, sentTime = now() where emailID = :emailID",
               array(":emailID" => $emailID)
