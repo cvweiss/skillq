@@ -27,7 +27,7 @@ if ($_POST) {
 
             return $app->redirect("/");
         } else {
-            $error = "No such user exists, try again";
+            $error = "That username and password combination does not exist.  Please insert another quarter and try again.";
         }
     }
 
