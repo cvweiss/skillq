@@ -365,6 +365,37 @@ function subscriptionCheck()
 				array(":keyRowID" => $row["keyRowID"])
 			   );
 	}
+	$expiringToday = Db::query(
+			"select * from skq_api_account where paidUntil > now() and paidUntil < date_add(now(), interval 1 day)"
+			);
+	foreach ($expiringToday as $row) {
+			$account = $row;
+			$api = Db::queryRow("select * from skq_api where keyRowID = :id", array(":id" => $row["keyRowID"]));
+			$email = Db::queryField("select email from skq_users where id = :id", "email", array(":id" => $api["userID"]));
+			if ($email == "") continue;
+			$event = "SubEnding:" . $api["keyRowID"];
+			$toons = array();
+			$t = Db::query("select * from skq_character_info where keyRowID = :id order by skillsTrained", array(":id" => $api["keyRowID"]));
+			foreach($t as $row) {
+				$toons[] = $row["characterName"];
+			}
+			$toons = implode(", ", $toons);
+                        $count = Db::queryField(
+                                        "select count(*) count from skq_email_history where email = :email and event = :event",
+                                        "count",
+                                        array(":email" => $email, ":event" => $event),
+                                        0
+                                        );
+                        if ($count == 0) {
+				$subject = "Warning! Eve Online subscription ending soon...";
+				$body = "Your Eve Online account subscription is ending at " . $account["paidUntil"] . " UTC.  This account holds the following characters: $toons\n\n--SkillQ.net";
+				CreateEmail::create($email, $subject, $body);		
+				Db::execute(   
+						"insert into skq_email_history (email, event, expireTime) values (:email, :event, date_add(now(), interval 24 hour))",
+						array(":email" => $email, ":event" => $event)
+					   );
+			}
+	}
 
 	$expired = Db::query("select * from skq_api_account where paidUntil < now()");
 	foreach ($expired as $row) {
@@ -496,7 +527,6 @@ function updateWallet()
 				$arr   = array("characterID" => $charID, "rowCount" => 1000);
 				$q     = $pheal->charScope->WalletJournal($arr);
 			} catch (Exception $ex) {
-				print_r($ex);
 				continue;
 			}
 			$cachedUntil = $q->cached_until;
