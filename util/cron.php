@@ -351,6 +351,39 @@ function statusCheck()
 	Db::execute("delete from skq_email_history where expireTime < now()");
 	statusCheckHours(24);
 	statusCheckHours(6);
+	apiExpiresCheck();
+}
+
+function apiExpiresCheck()
+{
+	$apiExpires = Db::query("select * from skq_api where expires > now() and expires < date_add(now(), interval 24 hour)");
+	foreach($apiExpires as $row) {
+		$keyID = $row["keyID"];
+		$email = Db::queryField("select email from skq_users where id = :id", "email", array(":id" => $row["userID"]));
+		if ($email == "") continue;
+		$event = "ApiExpires:" . $row["keyID"];
+		$toons = array();
+		$t = Db::query("select * from skq_character_info where keyRowID = :id order by skillsTrained desc", array(":id" => $row["keyRowID"]));
+		foreach($t as $row) {
+			$toons[] = $row["characterName"];
+		}
+		$toons = implode(", ", $toons);
+		$count = Db::queryField(
+				"select count(*) count from skq_email_history where email = :email and event = :event",
+				"count",
+				array(":email" => $email, ":event" => $event),
+				0
+				);
+		if ($count == 0) {
+			$subject = "API expiring soon...";
+			$body = "Your Eve Online API Key ID $keyID is expiring soon.  If this expires SkillQ will no longer be able to monitor skills.  This API is for the following characters: $toons<br/><br/>--SkillQ.net";
+			CreateEmail::create($email, $subject, $body);
+			Db::execute(
+					"insert into skq_email_history (email, event, expireTime) values (:email, :event, date_add(now(), interval 24 hour))",
+					array(":email" => $email, ":event" => $event)
+				   );
+		}
+	}
 }
 
 function subscriptionCheck()
@@ -369,32 +402,32 @@ function subscriptionCheck()
 			"select * from skq_api_account where paidUntil > now() and paidUntil < date_add(now(), interval 1 day)"
 			);
 	foreach ($expiringToday as $row) {
-			$account = $row;
-			$api = Db::queryRow("select * from skq_api where keyRowID = :id", array(":id" => $row["keyRowID"]));
-			$email = Db::queryField("select email from skq_users where id = :id", "email", array(":id" => $api["userID"]));
-			if ($email == "") continue;
-			$event = "SubEnding:" . $api["keyRowID"];
-			$toons = array();
-			$t = Db::query("select * from skq_character_info where keyRowID = :id order by skillsTrained", array(":id" => $api["keyRowID"]));
-			foreach($t as $row) {
-				$toons[] = $row["characterName"];
-			}
-			$toons = implode(", ", $toons);
-                        $count = Db::queryField(
-                                        "select count(*) count from skq_email_history where email = :email and event = :event",
-                                        "count",
-                                        array(":email" => $email, ":event" => $event),
-                                        0
-                                        );
-                        if ($count == 0) {
-				$subject = "Warning! Eve Online subscription ending soon...";
-				$body = "Your Eve Online account subscription is ending at " . $account["paidUntil"] . " UTC.  This account holds the following characters: $toons\n\n--SkillQ.net";
-				CreateEmail::create($email, $subject, $body);		
-				Db::execute(   
-						"insert into skq_email_history (email, event, expireTime) values (:email, :event, date_add(now(), interval 24 hour))",
-						array(":email" => $email, ":event" => $event)
-					   );
-			}
+		$account = $row;
+		$api = Db::queryRow("select * from skq_api where keyRowID = :id", array(":id" => $row["keyRowID"]));
+		$email = Db::queryField("select email from skq_users where id = :id", "email", array(":id" => $api["userID"]));
+		if ($email == "") continue;
+		$event = "SubEnding:" . $api["keyRowID"];
+		$toons = array();
+		$t = Db::query("select * from skq_character_info where keyRowID = :id order by skillsTrained desc", array(":id" => $api["keyRowID"]));
+		foreach($t as $row) {
+			$toons[] = $row["characterName"];
+		}
+		$toons = implode(", ", $toons);
+		$count = Db::queryField(
+				"select count(*) count from skq_email_history where email = :email and event = :event",
+				"count",
+				array(":email" => $email, ":event" => $event),
+				0
+				);
+		if ($count == 0) {
+			$subject = "Warning! Eve Online subscription ending soon...";
+			$body = "Your Eve Online account subscription is ending at " . $account["paidUntil"] . " UTC.  This account holds the following characters: $toons<br/><br/>--SkillQ.net";
+			CreateEmail::create($email, $subject, $body);		
+			Db::execute(   
+					"insert into skq_email_history (email, event, expireTime) values (:email, :event, date_add(now(), interval 24 hour))",
+					array(":email" => $email, ":event" => $event)
+				   );
+		}
 	}
 
 	$expired = Db::query("select * from skq_api_account where paidUntil < now()");
