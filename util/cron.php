@@ -404,6 +404,7 @@ function subscriptionCheck()
 	foreach ($expiringToday as $row) {
 		$account = $row;
 		$api = Db::queryRow("select * from skq_api where keyRowID = :id", array(":id" => $row["keyRowID"]));
+		if ($api == null) continue;
 		$email = Db::queryField("select email from skq_users where id = :id", "email", array(":id" => $api["userID"]));
 		if ($email == "") continue;
 		$event = "SubEnding:" . $api["keyRowID"];
