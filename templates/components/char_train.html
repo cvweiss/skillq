@@ -1,3 +1,12 @@
+<div class="row">
+<table class="table table-bordered table-hover table-condensed span6">
+{% for attr in implants %}
+	<tr><td>{{ attr.attributeName|capitalize }} <a href="#" onClick="$('.{{ attr.attributeName }}').show();">+</a>/<a href="#" onClick="$('.{{ attr.attributeName }}').hide();">-</a></td>
+	<td>{{ attr.baseValue}} (+{{attr.bonus}})</td><td>{{ attr.implantName }}</td></tr>
+{% endfor %}
+</table><br/>
+</div>
+
 {% if skillTrain|length > 0 %}
 <div class="row">
         <div class="span6">
@@ -32,7 +41,7 @@
 	<tbody>
 	{% for time, rows in skillTrain %}
 		{% for row in rows %}
-		<tr class="level{{ row.level }} skill">
+		<tr class="level{{ row.level }} skill {{ row.primaryAttribute }} {{ row.secondaryAttribute }} foo">
 			<td><i class="icon-minus"></i>{% set field = row %} {% include 'components/text_item.html' %} {% if row.skillPoints %}<small><em>{{ row.skillPoints|number_format(0) }} SP</em></small>{% endif %}</td>
 			<td>
 				{% if row.training > 0 %}<img src="/img/skills/level{{ row.training }}_t.gif"/>

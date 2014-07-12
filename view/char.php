@@ -63,6 +63,7 @@ $wallet = $isShare ? array() : Db::query(
   array(":charID" => $charID),
   1
 );
+$headAttr = Db::query("select * from skq_character_implants where characterID = :charID order by attributeID", array(":charID" => $charID), 0);
 
 $skillTrain = array();
 if ($pageType == "train") {
@@ -180,7 +181,8 @@ $app->render(
     "pageType"      => $pageType,
     "isShare"       => $isShare,
     "skillTrain"    => $skillTrain,
-    "config"        => $config
+    "config"        => $config,
+    "implants"      => $headAttr,
   )
 );
 
