@@ -481,53 +481,10 @@ function statusCheckHours($hours)
 			continue;
 		}
 	}
-	// Check for out of date clones
+	// Update total skill points
 	Db::execute(
 			"update skq_character_info i, (select characterID, sum(skillPoints) skillPoints from skq_character_skills group by 1) as s set i.skillPoints = s.skillPoints where i.characterID = s.characterID"
 		   );
-	$insufficientClones = Db::query(
-			"select keyRowID, characterID, characterName, skillPoints, cloneSkillPoints from skq_character_info where cloneSkillPoints < skillPoints and display = 1 and subFlag != 2"
-			);
-	foreach ($insufficientClones as $row) {
-		$name     = $row["characterName"];
-		$sp       = $row["skillPoints"];
-		$cloneSP  = $row["cloneSkillPoints"];
-		$api      = Db::queryRow(
-				"select * from skq_api where keyRowID = :keyRowID",
-				array(":keyRowID" => $row["keyRowID"])
-				);
-		$userID   = $api["userID"];
-		$userInfo = Db::queryRow("select * from skq_users where id = :userID", array(":userID" => $userID));
-		$email    = $userInfo["email"];
-		$subject  = "$name has an insufficient clone!";
-		$url      = "http://skillq.net/char/" . urlencode($name);
-		$body     = "Your character, <a href='$url'>$name</a>, has " . number_format(
-				$sp,
-				0
-				) . " SP, however, your clone can only support " . number_format(
-					$cloneSP,
-					0
-					) . " SP.  If you get podded you will lose skill points!  It is highly recommended you update your clone as soon as possible!<br/><br/>-- SkillQ.net";
-		$event    = "24InsuffClone:$name";
-		try {
-			$count = Db::queryField(
-					"select count(*) count from skq_email_history where email = :email and event = :event",
-					"count",
-					array(":email" => $email, ":event" => $event),
-					0
-					);
-			if ($count == 0) {
-				CreateEmail::create($email, $subject, $body);
-				Db::execute(
-						"insert into skq_email_history (email, event, expireTime) values (:email, :event, date_add(now(), interval 7 day))",
-						array(":email" => $email, ":event" => $event)
-					   );
-			}
-		} catch (Exception $ex) {
-			print_r($ex);
-			continue;
-		}
-	}
 }
 
 function updateWallet()
