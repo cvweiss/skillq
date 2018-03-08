@@ -1,41 +1,9 @@
 <?php
-if ($_POST) {
 
-    @$username = $_POST["username"];
-    @$password = $_POST["password"];
-    @$autologin = isset($_POST["autologin"]) ? 1 : 0;
-    @$requesturi = $_POST["requesturi"];
+use zkillboard\crestsso\CrestSSO;
 
-    $error = "An undefined error has occured....";
-    if (!$username) {
-        $error = "No username given";
-    } elseif (!$password) {
-        $error = "No password given";
-    } elseif ($username && $password) {
-        $check = User::checkLogin($username, $password);
-        if ($check > 0) // Success
-        {
-            $message = User::setLogin($username, $password, $autologin);
-            $app->view(new \Slim\Extras\Views\Twig());
-            $twig = $app->view()->getEnvironment();
-            $u    = User::getUserInfo();
-            $twig->addGlobal("sessionusername", $u["username"]);
-            $twig->addGlobal("sessionuserid", $u["id"]);
-            $twig->addGlobal("sessionadmin", $u["admin"]);
-            $twig->addGlobal("sessionmoderator", (bool) $u["moderator"]);
-            $ignoreUris = array("/register/", "/login/", "/logout/");
+global $clientID, $secretKey, $callbackURL, $scopes;
 
-            return $app->redirect("/");
-        } else {
-            $error = "That username and password combination does not exist.  Please insert another quarter and try again.";
-        }
-    }
-
-    return $app->render("login.html", array("message" => $error, "type" => "error"));
-}
-
-if (User::isLoggedIn()) {
-    return $app->redirect("/");
-}
-
-$app->render("login.html");
+$sso = new CrestSSO($clientID, $secretKey, $callbackURL, $scopes);
+$loginURL = $sso->getLoginURL($_SESSION);
+$app->redirect($loginURL);

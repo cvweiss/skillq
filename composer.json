@@ -5,9 +5,10 @@
         "twig/twig": "1.15",
         "twig/extensions": "1.*",
         "aptoma/twig-markdown": "*",
-        "pheal/pheal": "*",
         "phpmailer/phpmailer": "*",
-	"cvweiss/zlibrary":"*"
+	"cvweiss/zlibrary":"*",
+        "zkillboard/crestsso": "^0.0.5",
+        "guzzlehttp/guzzle": "^6.3"
     },
     "minimum-stability": "stable",
 	"prefer-stable": true

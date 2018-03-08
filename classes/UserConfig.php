@@ -13,13 +13,7 @@ class UserConfig
      */
     public static function getUserId()
     {
-        $userInfo = User::getUserInfo();
-        if ($userInfo === null) {
-            throw new Exception("user is not logged in");
-        }
-        $id = $userInfo["id"];
-
-        return $id;
+	return @$_SESSION['character_id'];
     }
 
     /**
@@ -27,6 +21,7 @@ class UserConfig
      */
     public static function loadUserConfig($id)
     {
+	throw new Exception("no");
         if (UserConfig::$userConfig != null) {
             return;
         }
@@ -44,6 +39,7 @@ class UserConfig
      */
     public static function get($key, $defaultValue = null)
     {
+	throw new Exception("no");
         if (!User::isLoggedIn()) {
             return $defaultValue;
         }
@@ -68,6 +64,7 @@ class UserConfig
      */
     public static function set($key, $value, $default = null)
     {
+	throw new Exception("no");
         if (!User::isLoggedIn()) {
             throw new Exception("User is not logged in.");
         }

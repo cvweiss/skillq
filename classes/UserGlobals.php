@@ -21,11 +21,11 @@ class UserGlobals extends Twig_Extension
         $result = array();
         if (isset($_SESSION["loggedin"])) {
             $u = User::getUserInfo();
-            $this->addGlobal($result, "sessionusername", $u["username"]);
-            $this->addGlobal($result, "sessionuserid", $u["id"]);
-            $this->addGlobal($result, "sessionadmin", (bool) $u["admin"]);
-            $this->addGlobal($result, "sessionmoderator", (bool) $u["moderator"]);
-            $this->addGlobal($result, "sessiontheme", UserConfig::get("theme"), "cyborg");
+            $this->addGlobal($result, "sessionusername", $_SESSION['character_id']);
+            $this->addGlobal($result, "sessionuserid", $_SESSION['character_id']);
+            $this->addGlobal($result, "sessionadmin", false);
+            $this->addGlobal($result, "sessionmoderator", false);
+            $this->addGlobal($result, "sessiontheme", "cyborg");
             global $characters;
             $characters = Db::query(
               "select characterID, characterName from skq_api a left join skq_character_info i on (a.keyRowID = i.keyRowID) where a.userID = :userID and display = 1 order by skillsTrained desc, skillPoints desc, characterName",

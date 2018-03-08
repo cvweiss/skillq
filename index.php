@@ -24,7 +24,7 @@ $app->error(function (\Exception $e) use ($app){
 });
 
 // Check if the user has autologin turned on
-if(!User::isLoggedIn()) User::autoLogin();
+//if(!User::isLoggedIn()) User::autoLogin();
 
 // Load the routes - always keep at the bottom of the require list ;)
 include( "routes.php" );

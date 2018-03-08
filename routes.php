@@ -8,22 +8,8 @@ $app->get("/", function () use ($app){
     include( "view/index.php" );
 });
 
-// Register
-$app->get("/register/", function() use ($app) {
-    global $cookie_name, $cookie_time;
-    include( "view/register.php" );
-});
-$app->post("/register/", function() use ($app) {
-    global $cookie_name, $cookie_time;
-    include( "view/register.php" );
-});
-
 // Login stuff
 $app->get("/login/", function() use ($app) {
-    global $cookie_name, $cookie_time;
-    include( "view/login.php" );
-});
-$app->post("/login/", function() use ($app) {
     global $cookie_name, $cookie_time;
     include( "view/login.php" );
 });
@@ -104,3 +90,6 @@ $app->get("/item/:id/", function($id) use ($app) {
     include ("view/item.php" );
 });
 
+$app->get("/ccp/callback", function () use ($app) {
+	include ("view/ccp-callback.php");
+});

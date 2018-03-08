@@ -11,5 +11,7 @@ $twig->addGlobal("sessionuserid", "");
 $twig->addGlobal("sessionadmin", "");
 $twig->addGlobal("sessionmoderator", "");
 setcookie($cookie_name, "", time() - $cookie_time, "/");
+$_SESSION['character_id'] = "";
+$twig->addGlobal("characters", []);
 
 $app->render("logout.html", array("message" => "You are now logged out"));

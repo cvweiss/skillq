@@ -11,7 +11,7 @@ class User
      * @param int    $autologin
      * @return array
      */
-    public static function setLogin($username, $password, $autologin)
+    public static function setLogin($username, $password, $autologin = true)
     {
         global $cookie_name, $cookie_time;
         $password = Password::genPassword($password);
@@ -111,7 +111,7 @@ class User
      */
     public static function isLoggedIn()
     {
-        return isset($_SESSION["loggedin"]);
+        return isset($_SESSION["character_id"]);
     }
 
     /**

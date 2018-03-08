@@ -3,14 +3,11 @@
 if (!User::isLoggedIn()) {
     $app->redirect("/login/");
 }
-$userID = User::getUserID();
 
-global $characters;
-$characters = Db::query(
-  "select characterID, characterName from skq_api a left join skq_character_info i on (a.keyRowID = i.keyRowID) where a.userID = :userID and display = 1 order by skillsTrained desc, skillPoints desc, characterName",
-  array(":userID" => $userID),
-  1
-);
+global $chars;
+
+$characters = $chars;
+$userID = $_SESSION['character_id'];
 
 Db::execute("delete from skq_character_shares where expirationTime < now()");
 

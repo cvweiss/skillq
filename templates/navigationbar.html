@@ -24,14 +24,12 @@
 		</ul>
 		<ul class="nav pull-right">
 		{% if sessionusername == "" %}
-                        <li><a href="/register/">Register</a></li>
-						<li><a class="dropdown-toggle" href="/login/">Sign In</a></li>
+			<li><a class="dropdown-toggle" href="/login/">Login</a></li>
 		{% else %}
-			<li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#"><span class="hidden-phone">{{ sessionusername }} </span><i class="icon-user"></i><b class="caret"></b></a>
+			<li><a href='/login/'>Add Character</a></li>
+			<li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#"><span class="hidden-phone"></span><i class="icon-user"></i><b class="caret"></b></a>
 				<ul class="dropdown-menu">
-					<li><a href="/manage/">Manage API</a></li>
 					<li><a href="/shares/">Shares</a></li>
-					<li><a href="/account/">Account</a></li>
 					<li><a href="/logout/">Logout</a></li>
 				</ul>
 			</li>

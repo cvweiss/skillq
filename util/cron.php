@@ -4,37 +4,10 @@ require_once __DIR__ . "/../init.php";
 
 function clearQueue()
 {
-	$toClean = Db::query(
-			"select characterID from skq_character_training where trainingEndTime < now()",
-			array(),
-			0
-			);
+	$toClean = Db::query("select characterID from skq_character_training where trainingEndTime < now()");
 	foreach ($toClean as $clean) {
 		$charID = $clean["characterID"];
-		Db::execute(
-				"replace into skq_character_training (characterID, trainingStartTime, trainingEndTime, trainingTypeID, trainingStartSP, trainingToLevel) select characterID, startTime, endTime, typeID, startSP, level from skq_character_queue where characterID = :charID and endTime > now() order by queuePosition limit 1",
-				array(":charID" => $charID)
-			   );
-	}
-	sleep(1);
-	return;
-}
-
-function checkApis()
-{
-	Db::execute("update skq_api set errorCode = 0 where errorCode = 221 and lastValidation < date_sub(now(), interval 6 hour)");
-	$apis = Db::query(
-			"select keyRowID, keyID, vCode from skq_api where (errorCode < 200 or errorCode > 299) and cachedUntil < date_sub(now(), interval 1 hour)",
-			array(),
-			0
-			);
-	foreach ($apis as $api) {
-		try {
-			Api::processApi($api["keyRowID"], $api["keyID"], $api["vCode"]);
-			sleep(1);
-		} catch (Exception $ex) {
-			// Do nothing
-		}
+		Db::execute("replace into skq_character_training (characterID, trainingStartTime, trainingEndTime, trainingTypeID, trainingStartSP, trainingToLevel) select characterID, startTime, endTime, typeID, startSP, level from skq_character_queue where characterID = :charID and endTime > now() order by queuePosition limit 1", [":charID" => $charID]);
 	}
 }
 
@@ -44,22 +17,14 @@ function updateChars()
 	$keyRowID = 0;
 	$charID   = 0;
 
-	$chars = Db::query(
-			"select * from skq_character_info where cachedUntil < now() and display = 1 and subFlag != 2 order by lastChecked",
-			array(),
-			0
-			);
+	$chars = Db::query("select * from skq_character_info where cachedUntil < now() and display = 1 and subFlag != 2 order by lastChecked");
 	foreach ($chars as $char) {
 		try {
 			Log::log("Updating " . $char["characterName"]);
 			$charID   = $char["characterID"];
 			$keyRowID = $char["keyRowID"];
 
-			Db::execute(
-					"update skq_character_info set lastChecked = now() where keyRowID = :keyRowID and characterID = :charID",
-					array(":keyRowID" => $keyRowID, ":charID" => $charID)
-				   );
-
+			Db::execute("update skq_character_info set lastChecked = now() where keyRowID = :keyRowID and characterID = :charID", [":keyRowID" => $keyRowID, ":charID" => $charID]);
 			$keyInfo = Db::queryRow(
 					"select * from skq_api where keyRowID = :keyRowID and errorCode = 0 and (expires is null or expires > now())",
 					array(":keyRowID" => $keyRowID),

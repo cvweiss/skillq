@@ -28,5 +28,36 @@ $twig->addFunction("pageTimer", new Twig_Function_Function("Util::pageTimer"));
 $twig->addFunction("queryCount", new Twig_Function_Function("Db::getQueryCount"));
 $twig->addFunction("isActive", new Twig_Function_Function("Util::isActive"));
 
-$igb = stristr(@$_SERVER["HTTP_USER_AGENT"], "EVE-IGB");
-$twig->addGlobal("eveigb", $igb);
+$twig->addGlobal("sessionusername", @$_SESSION['character_id']);
+
+$chars = [];
+if (isset($_SESSION['character_id']) && $_SESSION['character_id'] > 0) {
+	$chars = findChars($_SESSION['character_id']);
+	$chars = Db::query("select distinct i.characterID, characterName, trainingTypeID typeID, trainingToLevel, trainingEndTime, balance, i.cachedUntil, queueFinishes, subFlag from skq_character_info i left join skq_character_training t on (i.characterID = t.characterID) where i.characterID in (" . implode(",", $chars) . ") order by skillPoints desc");
+	$twig->addGlobal("characters", $chars);
+}
+
+function findChars($charID, &$chars = []) {
+	if (sizeof($chars) == 0) $chars = [$charID];
+	foreach ($chars as $char) {
+		$result = Db::query("select char2 c from skq_character_associations where char1 = :char", [':char' => $char]);
+		foreach ($result as $row) {
+			$nextChar = (int) $row['c'];
+			if (!in_array($nextChar, $chars)) {
+				$chars[] = $nextChar;
+				findChars($nextChar, $chars);
+			}
+		}
+	}
+	foreach ($chars as $char) {
+		$result = Db::query("select char1 c from skq_character_associations where char2 = :char", [':char' => $char]);
+		foreach ($result as $row) {
+			$nextChar = (int) $row['c'];
+			if (!in_array($nextChar, $chars)) {
+				$chars[] = $nextChar;
+				findChars($nextChar, $chars);
+			}
+		}
+	}
+	return array_unique($chars);
+}
