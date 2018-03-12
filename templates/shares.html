@@ -24,7 +24,7 @@
 			{% endfor %}
 				</select>
 			</td></tr>
-            <tr><td>Share ID:</td><td class=""><input id="shareid" name="shareid" type="text" placeholder="Leave blank to automatically generate a share ID." style="width: 100%"></td></tr>
+            <tr><td>Share ID:</td><td class=""><input id="shareid" name="shareid" type="text" placeholder="Leave blank to automatically generate a share ID," style="width: 100%"><br/><small><em>Custom share ID must be alphanumeric only.</em></small></td></tr>
             <tr><td><input type="submit" class="btn btn-primary" value="Add Share"></td><td>&nbsp;</td></tr>
             </tbody>
         </table>
@@ -48,7 +48,7 @@
 	<tr>
 		<td><a href="{{link}}" target="_blank">{{ share.characterName }}</a></td>
 		<td>{{ share.expirationTime }}</td> 
-		<td><strong class="text-error pull-right" style="cursor: pointer;" onclick="if(confirm('Are you sure you want to delete this share?')) window.location='/shares/action/delete/{{ share.shareID }}'" title="Delete this Share">X</strong></td>
+		<td><strong class="text-error pull-right" style="cursor: pointer;" onclick="if(confirm('Are you sure you want to delete this share?')) window.location='/shares/action/delete/{{ share.shareID|raw }}'" title="Delete this Share">X</strong></td>
 	</tr>
 {% endfor %}
 	</tbody>

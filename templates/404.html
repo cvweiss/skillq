@@ -1,1 +1,10 @@
-404
+{% extends "base.html" %}
+
+{% set pageTitle = "404" %}
+
+{% block content %}
+
+<div class="alert alert-success">
+{{ message }}
+</div>
+{% endblock %}

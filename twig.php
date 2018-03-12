@@ -33,6 +33,7 @@ $twig->addGlobal("sessionusername", @$_SESSION['character_id']);
 $chars = [];
 if (isset($_SESSION['character_id']) && $_SESSION['character_id'] > 0) {
 	$chars = findChars($_SESSION['character_id']);
+	$validChars = $chars;
 	$chars = Db::query("select distinct i.characterID, characterName, trainingTypeID typeID, trainingToLevel, trainingEndTime, balance, i.cachedUntil, queueFinishes, subFlag from skq_character_info i left join skq_character_training t on (i.characterID = t.characterID) where i.characterID in (" . implode(",", $chars) . ") order by skillPoints desc");
 	$twig->addGlobal("characters", $chars);
 }

@@ -8,12 +8,12 @@
                         <td rowspan="2" style="width: 64px;" class="visible-phone">
                                 <img src="{{ image_character }}/{{ char.characterID}}_64.jpg" align="left" style="margin-right: .5em; height: 64px; width: 64px;" title="{{ char.characterName}}" class="visible-phone"/>
                         </td>
-                        <td style="width: 0px;"><img src="{{ image_corporation }}/{{ char.corporationID}}_32.png" title="{{ char.corporationName }}" class="hidden-phone eve-image"/></td>
+                        <td style="width: 64px;"><img src="{{ image_corporation }}/{{ char.corporationID}}_32.png" title="{{ char.corporationName }}" class="hidden-phone eve-image"/></td>
                 <td rowspan="2">
                         <strong>{{ char.characterName }}</strong><br/>
                         {{ char.corporationName }}<br/>
                         {% if char.allianceID %}{{ char.allianceName }}<br/>{% endif %}
-                        {{ char.balance|number_format(2) }} ISK<br/>
+                        {% if not isShare %}{{ char.balance|number_format(2) }} ISK<br/>{% endif %}
                         {% if training.typeName and char.subStatus != 'Subscription Expired' %}
                                 {% set field = training %} {% include 'components/text_item.html' %}<br/>
                                 {% if queueFinishes < 86400 %}

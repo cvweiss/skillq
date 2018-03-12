@@ -21,7 +21,10 @@ if ($_POST) {
     }
 
     $shareID = trim($_POST["shareid"]);
-    if (strlen($shareID) == 0) {
+    $cleanShareID = preg_replace("/[^A-Za-z0-9 ]/", '', $shareID);
+    if ($shareID != $cleanShareID) {
+	$message = "A custom shareID must be alphanumeric only";
+    } else if (strlen($shareID) == 0) {
         do {
             $shareID = gen_uuid();
         } while (Db::queryField(

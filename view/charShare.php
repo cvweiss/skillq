@@ -11,4 +11,4 @@ if ($share) {
     );
     $bypassLogin = true;
     include "view/char.php";
-}
+} else $app->render("404.html", ['message' => "Invalid share - did it expire?", "type" => "error"], 404);

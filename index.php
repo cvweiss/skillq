@@ -4,7 +4,9 @@ $t = microtime(true);
 
 // Fire up the session!
 session_cache_limiter(false);
+session_set_cookie_params(86400 * 7);
 session_start();
+setcookie(session_name(), session_id(), time() + (86400 * 7), '/', '.skillq.net', true, true);
 
 // Autoload Slim + Twig
 require( __DIR__ . "/vendor/autoload.php" );

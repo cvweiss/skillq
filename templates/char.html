@@ -3,6 +3,13 @@
 {% set pageTitle = char.characterName %}
 
 {% block content %}
+<div class="">
+{% if message %}
+    <div class="alert">
+        {{ message|raw }}
+    </div>
+{% endif %}
+</div>
 {% include 'components/char_info.html' %}
 
 {% include 'components/char_menu.html' %}

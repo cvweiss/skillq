@@ -3,23 +3,26 @@
 $config = array();
 require_once("view/components/config.php");
 
+$isShare  = false;
+$charInfo = false;
 if (isset($bypassLogin)) {
 	$charInfo = Db::queryRow("select * from skq_character_info i where characterName = :name", [":name" => $name], 1);
 	$isShare  = true;
-} else {
+} else if (isset($_SESSION['character_id']) && $_SESSION['character_id'] > 0) {
 	$bypassLogin = false;
 
 	$pageCharID = (int) Db::queryField("select characterID from skq_character_info where characterName = :name", "characterID", [':name' => $name]);
-	$charID = (int) $_SESSION['character_id'];
-	if ($charID == $pageCharID) $count = 1;
-	else $count = Db::queryField("select count(*) count from skq_character_associations where (char1 = :pageID and char2 = :charID) or (char2 = :pageID and char1 = :charID)", "count", [':pageID' => $pageCharID, ':charID' => $charID]);
-
+	global $validChars;
+	$count = in_array($pageCharID, $validChars);
 	$charInfo = $count == 0 ? null : Db::queryRow("select i.* from skq_character_info i where characterID = :charID", [':charID' => $pageCharID]);
 	$isShare  = false;
 }
 
+if (!$charInfo && $isShare) {
+	return $app->render("404.html", ['message' => "Invalid share - did it expire?", "type" => "error"], 404);
+}
 if (!$charInfo) {
-	$app->redirect("/");
+	return $app->render("404.html", "Not your character to view...", 404);
 }
 
 if (!isset($pageType)) {
@@ -52,11 +55,7 @@ $queue  = Db::query(
 		array(":charID" => $charID),
 		1
 		);
-$wallet = $isShare ? array() : Db::query(
-		"select * from skq_character_wallet where characterID = :charID order by dttm desc",
-		array(":charID" => $charID),
-		1
-		);
+$wallet = $isShare ? array() : Db::query("select * from skq_character_wallet where characterID = :charID order by dttm desc", array(":charID" => $charID), 1);
 $headAttr = Db::query("select * from skq_character_implants where characterID = :charID order by attributeID", array(":charID" => $charID), 0);
 
 $skillTrain = array();
@@ -140,10 +139,14 @@ $maxSeconds = 0;
 foreach ($queue as $skill) {
 	$maxSeconds = max($maxSeconds, $skill["endTimeSeconds"]);
 }
+
+$message = "";
 $pageRefresh = 3600;
-@$seconds = $charInfo["cachedUntilSeconds"];
-if ($seconds > 0) {
-	$pageRefresh = min($pageRefresh, $seconds);
+$lastChecked = Db::queryField("select unix_timestamp(min(lastChecked)) lastChecked from skq_scopes where character_id = :charID", "lastChecked", [':charID' => $charID], 0);
+$pageRefresh = $lastChecked == 0 ? 1 : 3600 - (time() - $lastChecked);
+$pageRefresh = max(1, min(3600, $pageRefresh));
+if ($pageRefresh <= 60) {
+	$message = "API update imminent, page will automatically reload in... <span id='pageRefresher'></span>";
 }
 
 $totalSP = 0;
@@ -177,6 +180,7 @@ $app->render(
 			"skillTrain"    => $skillTrain,
 			"config"        => $config,
 			"implants"      => $headAttr,
+			"message"	=> $message,
 		     )
 	    );
 

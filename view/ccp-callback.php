@@ -25,8 +25,9 @@ $charID = $userInfo['characterID'];
 $refreshToken = $userInfo['refreshToken'];
 $scopes = explode(' ', $userInfo['scopes']);
 foreach ($scopes as $scope) {
-	Db::execute("insert ignore into scopes values(:charID, :scope, :refreshToken, 0)", [':charID' => $charID, ':scope' => $scope, ':refreshToken' => $refreshToken]);
+	Db::execute("insert ignore into skq_scopes values(:charID, :scope, :refreshToken, 0)", [':charID' => $charID, ':scope' => $scope, ':refreshToken' => $refreshToken]);
 }
+Db::execute("insert ignore into skq_scopes values(:charID, 'publicData', '', 0)", [':charID' => $charID]);
 
 if (!isset($_SESSION['character_id']) || $_SESSION['character_id'] == "")  $_SESSION['character_id'] = $charID;
 if ($_SESSION['character_id'] > "" && $charID != $_SESSION['character_id']) {
@@ -35,7 +36,7 @@ if ($_SESSION['character_id'] > "" && $charID != $_SESSION['character_id']) {
 
 Db::execute("insert ignore into skq_character_info (characterID, characterName) values (:charID, :charName)", [':charID' => $charID, ':charName' => $userInfo['characterName']]);
 
-return $app->redirect("/");
+return $app->redirect("/char/" . $userInfo['characterName'] . "/");
 
 /*
 @$username = $_POST["username"];
