@@ -18,7 +18,7 @@ class Info
           "select solarSystemID from ccp_systems where solarSystemName = :name",
           "solarSystemID",
           array(":name" => $systemName),
-          3600
+          60
         );
     }
 
@@ -32,7 +32,7 @@ class Info
         return Db::queryRow(
           "select solarSystemName, security, sunTypeID from ccp_systems where solarSystemID = :systemID",
           array(":systemID" => $systemID),
-          3600
+          60
         );
     }
 
@@ -45,7 +45,7 @@ class Info
         return Db::queryRow(
           "select * from ccp_zwormhole_info where solarSystemID = :systemID",
           array(":systemID" => $systemID),
-          3600
+          60
         );
     }
 
@@ -84,7 +84,7 @@ class Info
           "select typeName from ccp_invTypes where typeID = :typeID",
           "typeName",
           array(":typeID" => $typeID),
-          3600
+          60
         );
 
         if ($name === null) {
@@ -104,7 +104,7 @@ class Info
           "select typeID from ccp_invTypes where upper(typeName) = :typeName",
           "typeID",
           array(":typeName" => strtoupper($itemName)),
-          3600
+          60
         );
     }
 
@@ -121,7 +121,7 @@ class Info
           "select effectID from ccp_dgmTypeEffects where typeID = :typeID and effectID in (11, 12, 13, 2663, 3772)",
           "effectID",
           array(":typeID" => $typeID),
-          3600
+          60
         );
     }
 
@@ -135,7 +135,7 @@ class Info
           "select corporationID from skq_corporations where name = :name order by memberCount desc limit 1",
           "corporationID",
           array(":name" => $name),
-          3600
+          60
         );
     }
 
@@ -149,7 +149,7 @@ class Info
           "select allianceName from skq_alliances where allianceID = :id limit 1",
           "allianceName",
           array(":id" => $id),
-          3600
+          60
         );
     }
 
@@ -163,7 +163,7 @@ class Info
           "select factionID from skq_factions where name = :name",
           "factionID",
           array(":name" => $name),
-          3600
+          60
         );
     }
 
@@ -173,7 +173,7 @@ class Info
      */
     public static function getFactionName($id)
     {
-        return Db::queryField("select name from skq_factions where factionID = :id", "name", array(":id" => $id), 3600);
+        return Db::queryField("select name from skq_factions where factionID = :id", "name", array(":id" => $id), 60);
     }
 
     /**
@@ -186,7 +186,7 @@ class Info
           "select regionName from ccp_regions where regionID = :id",
           "regionName",
           array(":id" => $id),
-          3600
+          60
         );
 
         return $data;
@@ -202,7 +202,7 @@ class Info
           "select regionID from ccp_regions where regionName = :name",
           "regionID",
           array(":name" => $name),
-          3600
+          60
         );
     }
 
@@ -216,7 +216,7 @@ class Info
           "select regionID from ccp_systems where solarSystemID = :systemID",
           "regionID",
           array(":systemID" => $systemID),
-          3600
+          60
         );
 
         return $regionID;
@@ -232,13 +232,13 @@ class Info
           "select regionID from ccp_systems where solarSystemID = :systemID",
           "regionID",
           array(":systemID" => $systemID),
-          3600
+          60
         );
 
         return Db::queryRow(
           "select * from ccp_regions where regionID = :regionID",
           array(":regionID" => $regionID),
-          3600
+          60
         );
     }
 
@@ -252,7 +252,7 @@ class Info
           "select typeID from ccp_invTypes where typeName = :name",
           "typeID",
           array(":name" => $name),
-          3600
+          60
         );
 
         return $shipID;
@@ -271,7 +271,7 @@ class Info
           "select corporationName from skq_corporations where corporationID = :id",
           "corporationName",
           array(":id" => $id),
-          3600
+          60
         );
         if ($name != null) {
             return $name;
@@ -290,7 +290,7 @@ class Info
           "select allianceID from skq_alliances where name = :name",
           "allianceID",
           array(":name" => $name),
-          3600
+          60
         );
     }
 
@@ -304,7 +304,7 @@ class Info
           "select characterID from skq_characters where name = :name",
           "characterID",
           array(":name" => $name),
-          3600
+          60
         );
     }
 
@@ -321,7 +321,7 @@ class Info
           "select characterName from skq_character_info where characterID = :id",
           "characterName",
           array(":id" => $id),
-          3600
+          60
         );
         if ($name != null) {
             return $name;
@@ -340,7 +340,7 @@ class Info
           "select groupID from ccp_invTypes where typeID = :id",
           "groupID",
           array(":id" => $id),
-          3600
+          60
         );
         if ($groupID === null) {
             return 0;
@@ -359,7 +359,7 @@ class Info
           "select groupID from ccp_invGroups where groupName = :id",
           "groupID",
           array(":id" => $id),
-          3600
+          60
         );
         if ($groupID === null) {
             return 0;
@@ -381,7 +381,7 @@ class Info
           "select groupName from ccp_invGroups where groupID = :id",
           "groupName",
           array(":id" => $groupID),
-          3600
+          60
         );
 
         return $name;
@@ -450,12 +450,12 @@ class Info
         $data = Db::queryRow(
           "select corporationID, allianceID, 0 factionID from skq_corporations where corporationID = :id",
           array(":id" => $id),
-          3600
+          60
         );
         if ($data == null || sizeof($data) == 0) {
             $data["corporationID"] == $id;
         }
-        $moreData = Db::queryRow("select * from skq_corporations where corporationID = :id", array(":id" => $id), 3600);
+        $moreData = Db::queryRow("select * from skq_corporations where corporationID = :id", array(":id" => $id), 60);
         if ($moreData) {
             $data["memberCount"] = $moreData["memberCount"];
             $data["cticker"]     = $moreData["ticker"];
@@ -475,7 +475,7 @@ class Info
         $data = array();
         $data["allianceID"] == $id;
         // Add membercount, etc.
-        $moreData = Db::queryRow("select * from skq_alliances where allianceID = :id", array(":id" => $id), 3600);
+        $moreData = Db::queryRow("select * from skq_alliances where allianceID = :id", array(":id" => $id), 60);
         if ($moreData) {
             $data["memberCount"]    = $moreData["memberCount"];
             $data["aticker"]        = $moreData["ticker"];
@@ -555,7 +555,7 @@ class Info
      */
     public static function getSystemsInRegion($id)
     {
-        $result = Db::query("select solarSystemID from ccp_systems where regionID = :id", array(":id" => $id), 3600);
+        $result = Db::query("select solarSystemID from ccp_systems where regionID = :id", array(":id" => $id), 60);
         $data   = array();
         foreach ($result as $row) {
             $data[] = $row["solarSystemID"];
@@ -630,7 +630,7 @@ class Info
                                     $element["groupShips"] = Db::query(
                                       "select typeID as shipTypeID, typeName as shipName, raceID, 1 as noRecursion from ccp_invTypes where groupID = :id and published = 1 and marketGroupID is not null order by raceID, marketGroupID, typeName",
                                       array(":id" => $value),
-                                      3600
+                                      60
                                     );
                                 }
                                 break;
