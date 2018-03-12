@@ -42,9 +42,9 @@
         <ul class="nav pull-right hidden-phone">
             <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#"><b class="icon-list-alt"></b><b class="caret"></b></a>
                 <ul class="dropdown-menu">
-                                        <li><a href="#" onClick="$('.skill').show();">Expand All</a></li>
-                                        <li><a href="#" onClick="$('.skill').hide();">Collapse All</a></li>
-                                        <li><a href="#" onClick="$('.skill').show(); $('.level5').hide();">Exclude V's</a></li>
+                                        <li><a href="#" onClick="$('.skill').show(); return false;">Expand All</a></li>
+                                        <li><a href="#" onClick="$('.skill').hide(); return false;">Collapse All</a></li>
+                                        <li><a href="#" onClick="$('.skill').show(); $('.level5').hide(); return false;">Exclude V's</a></li>
                                 </ul>
                         </li>
                 </ul>
@@ -57,7 +57,7 @@
         {% if skill.groupName != currentGroup %}
         {% set currentGroup = skill.groupName %}
                 {% if skill.groupName != '' %}</tbody>{% endif %}
-                <thead><tr><th colspan="2" id="group{{skill.groupID}}" onClick="$('.skillGroup{{skill.groupID}}').toggle();" style="cursor: pointer;">
+                <thead><tr><th colspan="2" id="group{{skill.groupID}}" onClick="$('.skillGroup{{skill.groupID}}').toggle(); return false;" style="cursor: pointer;">
                         <i class="icon-list"></i>
                         {{ currentGroup }}
                          <em style="font-size: 75%">{{ attribute(groupSP, skill.groupID).sp|number_format(0) }} SP / {{ attribute(groupSP, skill.groupID).count|number_format(0) }} Skills</em></th></tr></thead>
