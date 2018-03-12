@@ -594,6 +594,7 @@ class Info
                                 $unixTime                   = strtotime($value);
                                 $diff                       = $unixTime - time();
                                 $element["trainingSeconds"] = $diff;
+				$element["deltaTime"] = $diff;
                                 break;
                             case "lastChecked":
                                 //$element["lastCheckedTime"] = date("Y-m-d H:i", $value);
@@ -604,6 +605,7 @@ class Info
                                 $unixTime                 = strtotime($value);
                                 $diff                     = $unixTime - time();
                                 $element["${key}Seconds"] = $diff;
+				if (isset($element['startTime'])) $element["deltaTime"] = $unixTime - strtotime($element['startTime']);
                                 break;
                             case "unix_timestamp":
                                 $element["ISO8601"]      = date("c", $value);
@@ -692,12 +694,18 @@ class Info
                                     $element["subStatus"] = "Subscription Expired!";
                                 }
                                 break;
-
+			    case "endSP":
+				$element['deltaSP'] = $element['endSP'] - $element['startSP'];
+				break;
                         }
                     }
                 }
             }
         }
+
+	if (isset($element['deltaSP']) && isset($element['deltaTime'])) {
+		$element['spHour'] = $element['deltaSP'] / ($element['deltaTime'] / 3600);
+	}
 
         return $element;
     }
