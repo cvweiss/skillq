@@ -6,15 +6,16 @@ use zkillboard\crestsso\CrestSSO;
 global $clientID, $secretKey, $callbackURL, $scopes;
 
 $accessTokens = [];
+$errorTokens = [];
 
 $sso = new CrestSSO($clientID, $secretKey, $callbackURL, $scopes);
 
 $minutely = date('Hi');
 while ($minutely == date('Hi')) {
-	$result = Db::query("select * from skq_scopes where lastChecked < date_sub(now(), interval 1 hour) order by character_id, scope");
+	$result = Db::query("select * from skq_scopes where lastChecked < date_sub(now(), interval 1 hour) order by characterID, scope");
 	if (sizeof($result) == 0) sleep(1);
 	foreach ($result as $row) {
-		$charID = $row['character_id'];
+		$charID = $row['characterID'];
 		$scope = $row['scope'];
 		$params = ['row' => $row];
 		$refreshToken = $row['refresh_token'];
@@ -23,6 +24,16 @@ while ($minutely == date('Hi')) {
 		$accessToken = null;
 		if ($row['refresh_token'] != '') {
 			$accessToken = isset($accessTokens[$refreshToken]) ? $accessTokens[$refreshToken] : $sso->getAccessToken($refreshToken);
+			if (isset($accessToken['error'])) {
+				if ($accessToken['error'] == 'invalid_token') {
+					Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]); 
+				} else {
+					Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
+					echo "$charID $scope\n";
+					print_r($accessToken);
+				}
+				continue;
+			}
 			$accessTokens[$refreshToken] = $accessToken;
 		}
 		if ($scope == 'publicData' || ($accessToken != null && !isset($accessToken['error']))) {
@@ -51,10 +62,9 @@ while ($minutely == date('Hi')) {
 					echo("Unknown scope: $scope\n");
 			}
 		} else {
-			echo "Failure with $charID $scope $requestToken\n";
-			var_dump($accessToken);
+			echo "Failure with $charID $scope $refreshToken\n";
 		}
-		Db::execute("update skq_scopes set lastChecked = now() where character_id = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
+		Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
 	}
 }
 
@@ -74,17 +84,11 @@ function loadQueue($charID, $queue)
 	if (sizeof($queue) > 0) {
 		$firstV = array_shift(array_slice($queue, 0, 1)); 
 		if (isset($firstV['level_start_sp'])) {
-			$first = true;
 			Db::execute("delete from skq_character_queue where characterID = :charID", [":charID" => $charID]);
 			Db::execute("update skq_character_skills set queue = 0 where characterID = :charID", [":charID" => $charID]);
 			Db::execute("delete from skq_character_training where characterID = :charID", [':charID' => $charID]);
 			foreach ($queue as $qs) {
-				if ($first) {
-					if (isset($qs['start_date'])) Db::execute("replace into skq_character_training values (:charID, :tst, :tet, :tti, :tss, :tds, :ttl)", [':charID' => $charID, ':tst' => $qs['start_date'], ':tet' => @$qs['finish_date'], ':tti' => $qs['skill_id'], ':tss' => $qs['level_start_sp'], ':tds' => $qs['level_end_sp'], ':ttl' => $qs['finished_level']]);
-					$first = false;
-				}
-
-				Db::execute("insert into skq_character_queue (characterID, queuePosition, typeID, level, startSP, endSP, startTime, endTime) values
+				Db::execute("insert ignore into skq_character_queue (characterID, queuePosition, typeID, level, startSP, endSP, startTime, endTime) values
 						(:charID, :qp, :typeID, :level, :startSP, :endSP, :startTime, :endTime)",
 						array(
 							":charID"    => $charID,
@@ -102,7 +106,7 @@ function loadQueue($charID, $queue)
 			}
 		}
 	} 
-	Db::execute("delete from skq_character_training where trainingEndTime < now() and characterID = :charID", [':charID' => $charID]);
+	Db::execute("replace into skq_character_training select characterID, startTime, endTime, typeID, startSP, endSP, level from skq_character_queue where characterID = :charID and endTime > now() order by endTime  limit 1", [':charID' => $charID]);
 }
 
 function loadWallet($charID, $wallet)
