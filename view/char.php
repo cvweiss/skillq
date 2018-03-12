@@ -142,7 +142,7 @@ foreach ($queue as $skill) {
 
 $message = "";
 $pageRefresh = 3600;
-$lastChecked = Db::queryField("select unix_timestamp(min(lastChecked)) lastChecked from skq_scopes where character_id = :charID", "lastChecked", [':charID' => $charID], 0);
+$lastChecked = Db::queryField("select unix_timestamp(min(lastChecked)) lastChecked from skq_scopes where characterID = :charID", "lastChecked", [':charID' => $charID], 0);
 $pageRefresh = $lastChecked == 0 ? 1 : 3600 - (time() - $lastChecked);
 $pageRefresh = max(1, min(3600, $pageRefresh));
 if ($pageRefresh <= 60) {
