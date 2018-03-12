@@ -22,7 +22,7 @@ if (!$charInfo && $isShare) {
 	return $app->render("404.html", ['message' => "Invalid share - did it expire?", "type" => "error"], 404);
 }
 if (!$charInfo) {
-	return $app->render("404.html", "Not your character to view...", 404);
+	return $app->render("404.html", ['message' => "Not your character to view...", "type" => "error"], 404);
 }
 
 if (!isset($pageType)) {
