@@ -33,38 +33,18 @@ if (!isset($pageType)) {
 
 
 $charID   = $charInfo["characterID"];
-$training = Db::queryRow(
-		"select * from skq_character_training where characterID = :charID and trainingEndTime > now()",
-		array(":charID" => $charID),
-		1
-		);
+$training = Db::queryRow("select * from skq_character_training where characterID = :charID and trainingEndTime > now()", [":charID" => $charID], 1);
 if ($training == null or sizeof($training) == 0) {
-	Db::queryRow(
-			"select * from skq_character_queue where characterID = :charID and endTime > now() order by queuePosition limit 1",
-			array(":charID" => $charID),
-			1
-		    );
+	Db::queryRow("select * from skq_character_queue where characterID = :charID and endTime > now() order by queuePosition limit 1", [":charID" => $charID], 1);
 }
-$skills = Db::query(
-		"select s.typeID, i.typeName, s.level, s.training, s.queue, g.groupID, g.groupName, s.skillPoints from skq_character_skills s left join ccp_invTypes i on (s.typeID = i.typeID) left join ccp_invGroups g on (i.groupID = g.groupID) where characterID = :charID order by g.groupName, i.typeName",
-		array(":charID" => $charID),
-		1
-		);
-$queue  = Db::query(
-		"select typeID, level, startTime, endTime from skq_character_queue where characterID = :charID and endTime >= now()",
-		array(":charID" => $charID),
-		1
-		);
+$skills = Db::query("select s.typeID, i.typeName, s.level, s.training, s.queue, g.groupID, g.groupName, s.skillPoints from skq_character_skills s left join ccp_invTypes i on (s.typeID = i.typeID) left join ccp_invGroups g on (i.groupID = g.groupID) where characterID = :charID order by g.groupName, i.typeName", [":charID" => $charID], 1);
+$queue  = Db::query("select typeID, level, startTime, endTime, startSP, endSP from skq_character_queue where characterID = :charID and endTime >= now()", [":charID" => $charID], 1);
 $wallet = $isShare ? array() : Db::query("select * from skq_character_wallet where characterID = :charID order by dttm desc", array(":charID" => $charID), 1);
 $headAttr = Db::query("select * from skq_character_implants where characterID = :charID order by attributeID", array(":charID" => $charID), 0);
 
 $skillTrain = array();
 if ($pageType == "train") {
-	$implants   = Db::query(
-			"select * from skq_character_implants where characterID = :charID order by (baseValue + bonus) desc, baseValue desc, bonus desc, attributeID",
-			array(":charID" => $charID),
-			1
-			);
+	$implants   = Db::query("select * from skq_character_implants where characterID = :charID order by (baseValue + bonus) desc, baseValue desc, bonus desc, attributeID", [":charID" => $charID], 1);
 	$attributes = array();
 	foreach ($implants as $implant) {
 		$attributeValue                        = $implant["baseValue"] + $implant["bonus"];
