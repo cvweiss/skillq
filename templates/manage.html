@@ -4,75 +4,24 @@
 
 {% block content %}
 <div class="row">
-<div class="well pull-right span5">
-<form name="addapi" method="post" action="/manage/">
-	<p>To quickly create an API key, go to <a href="https://community.eveonline.com/support/api-key/CreatePredefined?accessMask=59113480" target="_blank">https://community.eveonline.com/</a></p>
-        <table class="table table-condensed">
-            <tbody>
-            <tr><td style="width: 1em;">Key ID:</td><td><input id="keyid" name="keyid" type="text" required placeholder="Key ID"></td></tr>
-            <tr><td>vCode:</td><td class=""><input id="vcode" name="vcode" type="text" required placeholder="vCode" style="width: 100%"></td></tr>
-            <tr><td><input type="submit" class="btn btn-primary" value="Add API"></td><td>&nbsp;</td></tr>
-            </tbody>
-        </table>
-</form>
-</div>
-
-<div class="well pull-left span6">
+<div class="well span6">
 <h3>Characters</h3>
 <table class="table table-condensed table-hover table-striped table-bordered">
 	<tbody>
 	<tr>
-		<th style="width: 1em;">Key ID</th>
 		<th>Character</th>
 		<th>Last Checked</th>
-		<th>Cached Until</th>
-		<th><span class="pull-right">Display?</span></th>
+		<th style='width: 2em;'><span class='pull-right'>Remove?</span></th>
 	</tr>
-{% for api, val in keys %}
+	{% for char in scopes %}
 	<tr>
-		<td>{{ val.info.keyID }}</td>
-		<td colspan="4">&nbsp;</td>
-	</tr>
-	{% for char in val.chars %}
-	<tr>
-		<td style="text-align: right;">&mdash;</td>
 		<td>{{ char.characterName }}</td>
 		<td>{{ char.lastChecked }}</td>
-		<td>{{ char.cachedUntil }}</td>
-		<td><input class="pull-right" name="display:{{char.characterID}}" type="checkbox" {{ char.display == 1 ? 'checked' : '' }} onClick="overlay = $('<div></div>').prependTo('body').attr('id', 'overlay'); window.location = '/manage/action/toggle/{{char.characterID}}/'"></td>
-	</tr>	
-	{% endfor %}
-{% endfor %}
-	</tbody>
-</table>
-</div>
-</div>
-
-<div class="row">
-<div class="well pull-left span6">
-<h3>API Keys</h3>
-<table class="table table-condensed table-hover table-striped table-bordered">
-	<thead>
-		<tr>
-			<th>Key ID</th>
-			<th><font class="pull-right">Error Code</th>
-			<th>Cached Until</th>
-			<th>Expires</th>
-		</tr>
-	</thead>
-	<tbody>
-{% for api in apis %}
-	<tr>
-		<td><a href="http://community.eveonline.com/support/api-key/update/?keyID={{ api.keyID}}" target="_blank">{{ api.keyID }}</a></td>
-		<td><font class="pull-right">{{ api.errorCode }}</font></td>
-		<td>{{ api.cachedUntil }}</td>
-		<td>{% if api.expires > 0 %}{{api.expires}}{% else %}<em>Does not expire...</em>{% endif %}</td>
-		<td><strong class="text-error pull-right" style="cursor: pointer" onclick="if(confirm('Are you sure you want to delete Key ID {{ api.keyID }}?')) window.location='/manage/action/delete/{{ api.keyRowID }}'" title="Delete this API Key">X</strong></td>
+		<td><span class='pull-right'><a href='#' onClick="verifyRemoval('{{ char.characterName }}', {{ char.characterID }}); return false;">X</a></span></td>
 	</tr>
-{% endfor %}
+	{% endfor %}
 	</tbody>
 </table>
 </div>
 </div>
-
 {% endblock %}

@@ -3,26 +3,28 @@
 if (!User::isLoggedIn()) {
     return $app->redirect("/login/");
 }
-$userID = User::getUserID();
+$charID = User::getUserID();
+
+global $chars;
+$c = [];
+foreach ($chars as $ch) {
+        $c[] = $ch['characterID'];
+}
 
 if ($_POST) {
-    @$keyID = $_POST["keyid"];
-    @$vCode = $_POST["vcode"];
-
-    // Validate that the code is good
-    $result = Api::checkApi($keyID, $vCode);
-    if ($result !== true) {
-        return $app->render("message.html", array("type" => "error", "message" => $result));
-    } else {
-        Api::addApi($keyID, $vCode);
-        Api::processApi(null, $keyID, $vCode);
-    }
-    $app->redirect("/manage/");
+	$removeID = $_POST['remove'];
+	if (in_array($removeID, $c)) {
+		Db::execute("delete from skq_character_info where characterID = :charID", [':charID' => $removeID]);
+		Db::execute("delete from skq_scopes where characterID = :charID", [':charID' => $removeID]);
+		Db::execute("delete from skq_character_associations where char1 = :charID or char2 = :charID", [':charID' => $removeID]);;
+	}
+	return;
 }
+
 if (isset($action) && isset($id)) {
     switch ($action) {
         case "toggle":
-            $result  = Db::query("select keyRowID from skq_api where userID = :userID", array(":userID" => $userID), 0);
+            $result  = Db::query("select keyRowID from skq_scopes where characterID = :charID", array(":charID" => $charID), 0);
             $keyRows = array();
             foreach ($result as $row) {
                 $keyRows[] = $row["keyRowID"];
@@ -36,8 +38,8 @@ if (isset($action) && isset($id)) {
             break;
         case "delete":
             $rows = Db::execute(
-              "delete from skq_api where keyRowID = :keyRowID and userID = :userID",
-              array(":keyRowID" => $id, ":userID" => $userID)
+              "delete from skq_scopes where keyRowID = :keyRowID and characterID = :charID",
+              array(":keyRowID" => $id, ":charID" => $charID)
             );
             if ($rows > 0) {
                 Db::execute(
@@ -51,24 +53,11 @@ if (isset($action) && isset($id)) {
     $app->redirect("/manage/");
 }
 
-$apis      = Db::query(
-  "select * from skq_api where userID = :userID order by keyID",
-  array(":userID" => User::getUserID()),
-  0
-);
-$keyRowIDs = array();
-foreach ($apis as $api) {
-    $keyRowIDs[$api["keyRowID"]]         = array();
-    $keyRowIDs[$api["keyRowID"]]["info"] = $api;
-}
 
-foreach ($keyRowIDs as $keyRowID => $ignore) {
-    $keyRowIDs[$keyRowID]["chars"] = Db::query(
-      "select * from skq_character_info where keyRowID = :keyRowID order by skillsTrained desc",
-      array(":keyRowID" => $keyRowID),
-      0
-    );
+global $chars;
+$c = [];
+foreach ($chars as $ch) {
+	$c[] = $ch['characterID'];
 }
-
-Info::addInfo($keyRowIDs);
-return $app->render("manage.html", array("keys" => $keyRowIDs, "apis" => $apis));
+$scopes = Db::query("select * from skq_character_info where characterID in (" . implode(',', $c) . ") order by characterName");
+return $app->render("manage.html", ["scopes" => $scopes]);
