@@ -95,7 +95,7 @@ function loadQueue($charID, $queue)
 							":qp"        => $qs['queue_position'],
 							":typeID"    => $qs['skill_id'],
 							":level"     => $qs['finished_level'],
-							":startSP"   => $qs['level_start_sp'],
+							":startSP"   => $qs['training_start_sp'],
 							":endSP"     => $qs['level_end_sp'],
 							":startTime" => @$qs['start_date'],
 							":endTime"   => @$qs['finish_date']
