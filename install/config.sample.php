@@ -1,7 +1,7 @@
 <?php
 date_default_timezone_set("UTC");
 
-// Database parameters
+// MySQL Database parameters
 $dbUser = "";
 $dbPassword = "";
 $dbName = "";
@@ -13,6 +13,7 @@ $baseDir = dirname($baseFile) . "/";
 $baseUrl = "/";
 chdir($baseDir);
 
+// Replace $baseAddr with own address
 $baseAddr = "skillq.net";
 $siteName = "SkillQ.net";
 
@@ -21,6 +22,14 @@ $memcacheServer = "127.0.0.1";
 $memcachePort = "11211";
 
 $phealCacheLocation = "/var/www/skillq.net/cache/pheal/";
+
+// Application ESI Data
+// Unless you've already done so you'll need to create an application via https://developers.eveonline.com/
+$scopes = ['esi-skills.read_skills.v1', 'esi-skills.read_skillqueue.v1', 'esi-wallet.read_character_wallet'];
+// The callbackURL must be your address plus '/ccp/callback'. Your created application must match it.
+$callbackURL = 'https://skillq.net/ccp/callback'; // Remember to change it to http if you aren't using ssl or tls.
+$clientID = 'Your apps client id';
+$secretKey = 'Your apps secret key'; // Feel free to implement this more securely depending on use case.
 
 // Cookiiieeeee
 $cookie_name = "skQ";
