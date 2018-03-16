@@ -1,8 +1,7 @@
 composer.phar
 cache
-config.php
+/config.php
 notes
 vendor
 .idea
-composer.lock
 public/google*.html
