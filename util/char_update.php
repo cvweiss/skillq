@@ -65,6 +65,7 @@ while ($minutely == date('Hi')) {
 			echo "Failure with $charID $scope $refreshToken\n";
 		}
 		Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
+		Db::execute("update skq_character_info set lastChecked = now() where characterID = :charID", [':charID' => $charID]);
 	}
 }
 
