@@ -1,0 +1,774 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "92b495ba086717b3b3b1adc118f86e25",
+    "packages": [
+        {
+            "name": "aptoma/twig-markdown",
+            "version": "2.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/aptoma/twig-markdown.git",
+                "reference": "64a9c5c7418c08faf91c4410b34bdb65fb25c23d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/aptoma/twig-markdown/zipball/64a9c5c7418c08faf91c4410b34bdb65fb25c23d",
+                "reference": "64a9c5c7418c08faf91c4410b34bdb65fb25c23d",
+                "shasum": ""
+            },
+            "require": {
+                "twig/twig": "~1.12"
+            },
+            "require-dev": {
+                "codeclimate/php-test-reporter": "dev-master",
+                "erusev/parsedown": "^1.6",
+                "knplabs/github-api": "~1.2",
+                "league/commonmark": "~0.5",
+                "michelf/php-markdown": "~1",
+                "phpunit/phpunit": "~4.0",
+                "satooshi/php-coveralls": "~0.6"
+            },
+            "suggest": {
+                "knplabs/github-api": "Needed for using GitHub's Markdown engine provided through their API.",
+                "michelf/php-markdown": "Original Markdown engine with MarkdownExtra."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Aptoma": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Joris Berthelot",
+                    "email": "joris@berthelot.tel"
+                },
+                {
+                    "name": "Gunnar Lium",
+                    "email": "gunnar@aptoma.com"
+                }
+            ],
+            "description": "Twig extension to work with Markdown content",
+            "keywords": [
+                "markdown",
+                "twig"
+            ],
+            "time": "2015-10-23T20:27:08+00:00"
+        },
+        {
+            "name": "cvweiss/zcache",
+            "version": "v0.1.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cvweiss/zcache.git",
+                "reference": "1ca8a0007ad335d18357e15d8b7e10695ad165fc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cvweiss/zcache/zipball/1ca8a0007ad335d18357e15d8b7e10695ad165fc",
+                "reference": "1ca8a0007ad335d18357e15d8b7e10695ad165fc",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Unlicense"
+            ],
+            "authors": [
+                {
+                    "name": "Clinton Weiss",
+                    "email": "cvweiss@gmail.com"
+                }
+            ],
+            "description": "Library of classes to simplify caching",
+            "time": "2018-03-03T16:38:02+00:00"
+        },
+        {
+            "name": "cvweiss/zlibrary",
+            "version": "v0.3.4.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cvweiss/zlibrary.git",
+                "reference": "e5cf24ee2d91bd5bfd6642f19a887009c63e2b39"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cvweiss/zlibrary/zipball/e5cf24ee2d91bd5bfd6642f19a887009c63e2b39",
+                "reference": "e5cf24ee2d91bd5bfd6642f19a887009c63e2b39",
+                "shasum": ""
+            },
+            "require": {
+                "cvweiss/zcache": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Unlicense"
+            ],
+            "authors": [
+                {
+                    "name": "Clinton Weiss",
+                    "email": "cvweiss@gmail.com"
+                }
+            ],
+            "description": "Library of classes to simplify various tasks",
+            "time": "2018-03-03T16:31:19+00:00"
+        },
+        {
+            "name": "guzzlehttp/guzzle",
+            "version": "6.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/guzzle/guzzle.git",
+                "reference": "f4db5a78a5ea468d4831de7f0bf9d9415e348699"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/f4db5a78a5ea468d4831de7f0bf9d9415e348699",
+                "reference": "f4db5a78a5ea468d4831de7f0bf9d9415e348699",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/promises": "^1.0",
+                "guzzlehttp/psr7": "^1.4",
+                "php": ">=5.5"
+            },
+            "require-dev": {
+                "ext-curl": "*",
+                "phpunit/phpunit": "^4.0 || ^5.0",
+                "psr/log": "^1.0"
+            },
+            "suggest": {
+                "psr/log": "Required for using the Log middleware"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "6.2-dev"
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/functions_include.php"
+                ],
+                "psr-4": {
+                    "GuzzleHttp\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Michael Dowling",
+                    "email": "mtdowling@gmail.com",
+                    "homepage": "https://github.com/mtdowling"
+                }
+            ],
+            "description": "Guzzle is a PHP HTTP client library",
+            "homepage": "http://guzzlephp.org/",
+            "keywords": [
+                "client",
+                "curl",
+                "framework",
+                "http",
+                "http client",
+                "rest",
+                "web service"
+            ],
+            "time": "2017-06-22T18:50:49+00:00"
+        },
+        {
+            "name": "guzzlehttp/promises",
+            "version": "v1.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/guzzle/promises.git",
+                "reference": "a59da6cf61d80060647ff4d3eb2c03a2bc694646"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/guzzle/promises/zipball/a59da6cf61d80060647ff4d3eb2c03a2bc694646",
+                "reference": "a59da6cf61d80060647ff4d3eb2c03a2bc694646",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.5.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.4-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "GuzzleHttp\\Promise\\": "src/"
+                },
+                "files": [
+                    "src/functions_include.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Michael Dowling",
+                    "email": "mtdowling@gmail.com",
+                    "homepage": "https://github.com/mtdowling"
+                }
+            ],
+            "description": "Guzzle promises library",
+            "keywords": [
+                "promise"
+            ],
+            "time": "2016-12-20T10:07:11+00:00"
+        },
+        {
+            "name": "guzzlehttp/psr7",
+            "version": "1.4.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/guzzle/psr7.git",
+                "reference": "f5b8a8512e2b58b0071a7280e39f14f72e05d87c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/f5b8a8512e2b58b0071a7280e39f14f72e05d87c",
+                "reference": "f5b8a8512e2b58b0071a7280e39f14f72e05d87c",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.4.0",
+                "psr/http-message": "~1.0"
+            },
+            "provide": {
+                "psr/http-message-implementation": "1.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "~4.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.4-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "GuzzleHttp\\Psr7\\": "src/"
+                },
+                "files": [
+                    "src/functions_include.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Michael Dowling",
+                    "email": "mtdowling@gmail.com",
+                    "homepage": "https://github.com/mtdowling"
+                },
+                {
+                    "name": "Tobias Schultze",
+                    "homepage": "https://github.com/Tobion"
+                }
+            ],
+            "description": "PSR-7 message implementation that also provides common utility methods",
+            "keywords": [
+                "http",
+                "message",
+                "request",
+                "response",
+                "stream",
+                "uri",
+                "url"
+            ],
+            "time": "2017-03-20T17:10:46+00:00"
+        },
+        {
+            "name": "ircmaxell/random-lib",
+            "version": "v1.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/ircmaxell/RandomLib.git",
+                "reference": "e9e0204f40e49fa4419946c677eccd3fa25b8cf4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/ircmaxell/RandomLib/zipball/e9e0204f40e49fa4419946c677eccd3fa25b8cf4",
+                "reference": "e9e0204f40e49fa4419946c677eccd3fa25b8cf4",
+                "shasum": ""
+            },
+            "require": {
+                "ircmaxell/security-lib": "^1.1",
+                "php": ">=5.3.2"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^1.11",
+                "mikey179/vfsstream": "^1.6",
+                "phpunit/phpunit": "^4.8|^5.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.1.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "RandomLib": "lib"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Anthony Ferrara",
+                    "email": "ircmaxell@ircmaxell.com",
+                    "homepage": "http://blog.ircmaxell.com"
+                }
+            ],
+            "description": "A Library For Generating Secure Random Numbers",
+            "homepage": "https://github.com/ircmaxell/RandomLib",
+            "keywords": [
+                "cryptography",
+                "random",
+                "random-numbers",
+                "random-strings"
+            ],
+            "time": "2016-09-07T15:52:06+00:00"
+        },
+        {
+            "name": "ircmaxell/security-lib",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/ircmaxell/SecurityLib.git",
+                "reference": "f3db6de12c20c9bcd1aa3db4353a1bbe0e44e1b5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/ircmaxell/SecurityLib/zipball/f3db6de12c20c9bcd1aa3db4353a1bbe0e44e1b5",
+                "reference": "f3db6de12c20c9bcd1aa3db4353a1bbe0e44e1b5",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.2"
+            },
+            "require-dev": {
+                "mikey179/vfsstream": "1.1.*"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "SecurityLib": "lib"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Anthony Ferrara",
+                    "email": "ircmaxell@ircmaxell.com",
+                    "homepage": "http://blog.ircmaxell.com"
+                }
+            ],
+            "description": "A Base Security Library",
+            "homepage": "https://github.com/ircmaxell/SecurityLib",
+            "time": "2015-03-20T14:31:23+00:00"
+        },
+        {
+            "name": "phpmailer/phpmailer",
+            "version": "v6.0.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHPMailer/PHPMailer.git",
+                "reference": "44d49bab5ab1fef721d3ee07e75dc0865ddf4cc6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHPMailer/PHPMailer/zipball/44d49bab5ab1fef721d3ee07e75dc0865ddf4cc6",
+                "reference": "44d49bab5ab1fef721d3ee07e75dc0865ddf4cc6",
+                "shasum": ""
+            },
+            "require": {
+                "ext-ctype": "*",
+                "ext-filter": "*",
+                "php": ">=5.5.0"
+            },
+            "require-dev": {
+                "doctrine/annotations": "1.2.*",
+                "friendsofphp/php-cs-fixer": "^2.2",
+                "phpdocumentor/phpdocumentor": "2.*",
+                "phpunit/phpunit": "^4.8 || ^5.7",
+                "zendframework/zend-eventmanager": "3.0.*",
+                "zendframework/zend-i18n": "2.7.3",
+                "zendframework/zend-serializer": "2.7.*"
+            },
+            "suggest": {
+                "ext-mbstring": "Needed to send email in multibyte encoding charset",
+                "hayageek/oauth2-yahoo": "Needed for Yahoo XOAUTH2 authentication",
+                "league/oauth2-google": "Needed for Google XOAUTH2 authentication",
+                "psr/log": "For optional PSR-3 debug logging",
+                "stevenmaguire/oauth2-microsoft": "Needed for Microsoft XOAUTH2 authentication",
+                "symfony/polyfill-mbstring": "To support UTF-8 if the Mbstring PHP extension is not enabled (^1.2)"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PHPMailer\\PHPMailer\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "LGPL-2.1"
+            ],
+            "authors": [
+                {
+                    "name": "Jim Jagielski",
+                    "email": "jimjag@gmail.com"
+                },
+                {
+                    "name": "Marcus Bointon",
+                    "email": "phpmailer@synchromedia.co.uk"
+                },
+                {
+                    "name": "Andy Prevost",
+                    "email": "codeworxtech@users.sourceforge.net"
+                },
+                {
+                    "name": "Brent R. Matzelle"
+                }
+            ],
+            "description": "PHPMailer is a full-featured email creation and transfer class for PHP",
+            "time": "2018-01-05T13:19:58+00:00"
+        },
+        {
+            "name": "psr/http-message",
+            "version": "1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/http-message.git",
+                "reference": "f6561bf28d520154e4b0ec72be95418abe6d9363"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/http-message/zipball/f6561bf28d520154e4b0ec72be95418abe6d9363",
+                "reference": "f6561bf28d520154e4b0ec72be95418abe6d9363",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Http\\Message\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "http://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for HTTP messages",
+            "homepage": "https://github.com/php-fig/http-message",
+            "keywords": [
+                "http",
+                "http-message",
+                "psr",
+                "psr-7",
+                "request",
+                "response"
+            ],
+            "time": "2016-08-06T14:39:51+00:00"
+        },
+        {
+            "name": "slim/extras",
+            "version": "2.0.0",
+            "target-dir": "Slim/Extras",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/codeguy/Slim-Extras.git",
+                "reference": "271d5288c4056d82409fa7b20903a813c81f1962"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/codeguy/Slim-Extras/zipball/271d5288c4056d82409fa7b20903a813c81f1962",
+                "reference": "271d5288c4056d82409fa7b20903a813c81f1962",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0",
+                "slim/slim": ">=2.0.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Twig_Extensions_": "Views/Extension/",
+                    "Slim\\Extras": "."
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andrew Smith",
+                    "email": "a.smith@silentworks.co.uk",
+                    "homepage": "http://thoughts.silentworks.co.uk/"
+                },
+                {
+                    "name": "Josh Lockhart",
+                    "email": "info@joshlockhart.com",
+                    "homepage": "http://www.joshlockhart.com/"
+                }
+            ],
+            "description": "Extras package for the Slim Framework",
+            "homepage": "http://github.com/codeguy/Slim-Extras",
+            "keywords": [
+                "extensions",
+                "templating"
+            ],
+            "time": "2012-09-10T00:38:53+00:00"
+        },
+        {
+            "name": "slim/slim",
+            "version": "2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/slimphp/Slim.git",
+                "reference": "6de1151b3cb0b44ab489f3bf7d408ce4719e61e3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/slimphp/Slim/zipball/6de1151b3cb0b44ab489f3bf7d408ce4719e61e3",
+                "reference": "6de1151b3cb0b44ab489f3bf7d408ce4719e61e3",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Slim": "."
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Josh Lockhart",
+                    "email": "info@joshlockhart.com",
+                    "homepage": "http://www.joshlockhart.com/"
+                }
+            ],
+            "description": "Slim Framework, a PHP micro framework",
+            "homepage": "http://github.com/codeguy/Slim",
+            "keywords": [
+                "microframework",
+                "rest",
+                "router"
+            ],
+            "time": "2012-09-12T16:07:46+00:00"
+        },
+        {
+            "name": "twig/extensions",
+            "version": "v1.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/twigphp/Twig-extensions.git",
+                "reference": "8cf4b9fe04077bd54fc73f4fde83347040c3b8cd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/twigphp/Twig-extensions/zipball/8cf4b9fe04077bd54fc73f4fde83347040c3b8cd",
+                "reference": "8cf4b9fe04077bd54fc73f4fde83347040c3b8cd",
+                "shasum": ""
+            },
+            "require": {
+                "twig/twig": "~1.12"
+            },
+            "require-dev": {
+                "symfony/translation": "~2.3"
+            },
+            "suggest": {
+                "symfony/translation": "Allow the time_diff output to be translated"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.2.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Twig_Extensions_": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                }
+            ],
+            "description": "Common additional features for Twig that do not directly belong in core",
+            "homepage": "http://twig.sensiolabs.org/doc/extensions/index.html",
+            "keywords": [
+                "i18n",
+                "text"
+            ],
+            "time": "2014-10-30T14:30:03+00:00"
+        },
+        {
+            "name": "twig/twig",
+            "version": "v1.15.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/twigphp/Twig.git",
+                "reference": "85e4ff98000157ff753d934b9f13659a953f5666"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/twigphp/Twig/zipball/85e4ff98000157ff753d934b9f13659a953f5666",
+                "reference": "85e4ff98000157ff753d934b9f13659a953f5666",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.2.4"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.15-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Twig_": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com",
+                    "homepage": "http://fabien.potencier.org",
+                    "role": "Lead Developer"
+                },
+                {
+                    "name": "Armin Ronacher",
+                    "email": "armin.ronacher@active-4.com",
+                    "role": "Project Founder"
+                }
+            ],
+            "description": "Twig, the flexible, fast, and secure template language for PHP",
+            "homepage": "http://twig.sensiolabs.org",
+            "keywords": [
+                "templating"
+            ],
+            "time": "2013-12-06T07:47:10+00:00"
+        },
+        {
+            "name": "zkillboard/crestsso",
+            "version": "v0.0.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/zKillboard/crestsso.git",
+                "reference": "bf4e050644250e2a567e64222d29efc539e70e93"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/zKillboard/crestsso/zipball/bf4e050644250e2a567e64222d29efc539e70e93",
+                "reference": "bf4e050644250e2a567e64222d29efc539e70e93",
+                "shasum": ""
+            },
+            "require": {
+                "ircmaxell/random-lib": "^1.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "zkillboard\\crestsso\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Clinton V. Weiss",
+                    "email": "cvweiss@gmail.com"
+                }
+            ],
+            "time": "2017-02-07T22:15:04+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": true,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}
