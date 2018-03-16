@@ -46,7 +46,5 @@ $config = array(
 
 $logfile = "/var/log/www/skillq.log";
 
-$emailsmtp = "localhost";
-$emailusername = "noreply@skillq.net";
-$sentfromemail = "noreply@skillq.net";
-$sentfromdomain = "SkillQ";
+$email_id = "account@gmail.com";
+$email_pw = "password";

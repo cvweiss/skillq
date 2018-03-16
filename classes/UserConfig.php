@@ -21,15 +21,12 @@ class UserConfig
      */
     public static function loadUserConfig($id)
     {
-	throw new Exception("no");
-        if (UserConfig::$userConfig != null) {
-            return;
-        }
         UserConfig::$userConfig = array();
         $result                 = Db::query("select * from skq_users_config where id = :id", array(":id" => $id), 0);
         foreach ($result as $row) {
-            UserConfig::$userConfig[$row["key"]] = $row["value"];
+            UserConfig::$userConfig[$row["key"]] = json_decode($row["value"], true);
         }
+	return UserConfig::$userConfig;
     }
 
     /**
@@ -39,7 +36,6 @@ class UserConfig
      */
     public static function get($key, $defaultValue = null)
     {
-	throw new Exception("no");
         if (!User::isLoggedIn()) {
             return $defaultValue;
         }
@@ -64,27 +60,17 @@ class UserConfig
      */
     public static function set($key, $value, $default = null)
     {
-	throw new Exception("no");
-        if (!User::isLoggedIn()) {
-            throw new Exception("User is not logged in.");
-        }
-        $id                     = UserConfig::getUserId();
-        UserConfig::$userConfig = null;
+        if (!User::isLoggedIn()) throw new Exception("User is not logged in.");
+        $id = UserConfig::getUserId();
 
         if (is_null($value) || $value === $default || (is_string($value) && strlen(trim($value)) == 0)) {
             // Just remove the row and let the defaults take over
-            return Db::execute(
-              "delete from skq_users_config where id = :id and `key` = :key",
-              array(":id" => $id, ":key" => $key)
-            );
+            return Db::execute("delete from skq_users_config where id = :id and `key` = :key", [':id' => $id, ':key' => $key]);
         }
 
-        $value = json_encode($value);
-
-        return Db::execute(
-          "insert into skq_users_config (id, `key`, `value`) values (:id, :key, :value)
-                                          on duplicate key update `value` = :value",
-          array(":id" => $id, ":key" => $key, ":value" => $value)
-        );
+var_dump($value);
+	$value = json_encode($value);
+var_dump($value);
+        return Db::execute("insert into skq_users_config (id, `key`, `value`) values (:id, :key, :value) on duplicate key update `value` = :value", [":id" => $id, ":key" => $key, ":value" => $value]);
     }
 }

@@ -4,6 +4,9 @@
 
 {% block content %}
 	{% if chars %}
+		{% if showEmailReminder %}
+			<div class="alert">No email on file to notify you, please <a href='/account/'>click here</a> to update.</div>
+		{% endif %}
 		<div class="row-fluid">
 			<div class="characters span12">
 				{% for char in chars %}

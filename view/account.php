@@ -3,28 +3,18 @@
 if (!User::isLoggedIn()) {
     return $app->redirect("/login/");
 }
-$userID = User::getUserID();
+global $userID;
 
 if ($_POST) {
-    @$sendQEmails = isset($_POST["sendQEmails"]) && "" != $_POST["sendQEmails"];
-    @$sendAccEmails = isset($_POST["sendAccEmails"]) && "" != $_POST["sendAccEmails"];
-    @$refreshPages = isset($_POST["refreshPages"]) && "" != $_POST["refreshPages"];
     @$email = $_POST["email"];
+    @$nagger = $_POST['nagger'];
 
-    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        Db::execute(
-          "update skq_users set email = :email where id = :userID",
-          array(":email" => $email, ":userID" => $userID)
-        );
+    if ($email == "" || filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    	UserConfig::set("email", $email, "");
     }
-
-    UserConfig::set("sendQEmails", $sendQEmails, true);
-    UserConfig::set("sendAccEmails", $sendAccEmails, false);
-    UserConfig::set("refreshPages", $refreshPages, true);
-
+    UserConfig::set("nagger", $nagger == "" ? "nag" : "nonag", "nag");
     $app->redirect("/account/");
 }
 
-require_once("view/components/config.php");
-
-$app->render("account.html", array("config" => $config));
+$config = UserConfig::loadUserConfig($userID);
+$app->render("account.html", ['config' => $config]);
