@@ -68,9 +68,7 @@ class UserConfig
             return Db::execute("delete from skq_users_config where id = :id and `key` = :key", [':id' => $id, ':key' => $key]);
         }
 
-var_dump($value);
 	$value = json_encode($value);
-var_dump($value);
         return Db::execute("insert into skq_users_config (id, `key`, `value`) values (:id, :key, :value) on duplicate key update `value` = :value", [":id" => $id, ":key" => $key, ":value" => $value]);
     }
 }
