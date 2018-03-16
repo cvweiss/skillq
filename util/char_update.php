@@ -12,7 +12,7 @@ $sso = new CrestSSO($clientID, $secretKey, $callbackURL, $scopes);
 
 $minutely = date('Hi');
 while ($minutely == date('Hi')) {
-	$result = Db::query("select * from skq_scopes where lastChecked < date_sub(now(), interval 1 hour) order by characterID, scope");
+	$result = Db::query("select * from skq_scopes where lastChecked < date_sub(now(), interval 1 hour) order by lastChecked limit 5");
 	if (sizeof($result) == 0) sleep(1);
 	foreach ($result as $row) {
 		$charID = $row['characterID'];
@@ -111,6 +111,7 @@ function loadQueue($charID, $queue)
 
 function loadWallet($charID, $wallet)
 {
+	if (is_array($wallet)) return;
 	Db::execute("update skq_character_info set balance = :balance where characterID = :charID", [':charID' => $charID, ':balance' => $wallet]);
 }
 
