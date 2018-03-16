@@ -18,5 +18,5 @@ CREATE TABLE `skq_users` (
   UNIQUE KEY `email` (`email`),
   KEY `login_index` (`username`,`password`),
   KEY `revoked` (`revoked`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
 
