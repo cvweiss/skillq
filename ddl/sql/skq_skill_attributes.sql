@@ -14,5 +14,5 @@ CREATE TABLE `skq_skill_attributes` (
   `requiredSkill3` int(16) DEFAULT NULL,
   `requiredSkillLevel3` int(16) DEFAULT NULL,
   PRIMARY KEY (`typeID`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyIsam DEFAULT CHARSET=latin1 ;
 

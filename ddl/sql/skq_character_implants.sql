@@ -9,5 +9,5 @@ CREATE TABLE `skq_character_implants` (
   `implantName` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`characterID`,`attributeName`),
   KEY `characterID` (`characterID`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyIsam DEFAULT CHARSET=latin1 ;
 

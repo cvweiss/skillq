@@ -6,5 +6,5 @@ CREATE TABLE `skq_corporations` (
   `lastUpdate` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`corporationID`),
   KEY `corporationName` (`corporationName`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=COMPRESSED;
+) ENGINE=MyIsam DEFAULT CHARSET=latin1  ROW_FORMAT=PAGE;
 

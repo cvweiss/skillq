@@ -1,22 +1,12 @@
 
 DROP TABLE IF EXISTS `skq_users`;
 CREATE TABLE `skq_users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `userID` varchar(32) NOT NULL DEFAULT '',
   `username` varchar(128) NOT NULL,
-  `moderator` tinyint(1) NOT NULL,
-  `admin` tinyint(1) NOT NULL,
-  `password` varchar(64) NOT NULL,
-  `email` varchar(128) DEFAULT NULL,
-  `phone` int(10) DEFAULT NULL,
-  `phoneProvider` varchar(16) DEFAULT NULL,
   `dateCreated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `revoked` smallint(1) NOT NULL DEFAULT '0',
-  `change_hash` varchar(40) DEFAULT NULL,
-  `change_expiration` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  `lastAccess` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  PRIMARY KEY (`userID`),
   UNIQUE KEY `username` (`username`),
-  UNIQUE KEY `email` (`email`),
-  KEY `login_index` (`username`,`password`),
-  KEY `revoked` (`revoked`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
+  KEY `login_index` (`username`)
+) ENGINE=MyIsam DEFAULT CHARSET=utf8  ROW_FORMAT=PAGE;
 

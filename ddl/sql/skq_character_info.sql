@@ -20,11 +20,12 @@ CREATE TABLE `skq_character_info` (
   `queueFinishes` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `walletCachedUntil` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `subFlag` int(1) NOT NULL DEFAULT '0',
+  `unallocated_sp` varchar(16) DEFAULT '0',
   PRIMARY KEY (`characterID`),
   UNIQUE KEY `character_ID` (`characterID`),
   KEY `characterID` (`characterID`),
   KEY `display` (`display`),
   KEY `cachedUntil` (`cachedUntil`),
   KEY `walletCachedUntil` (`walletCachedUntil`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
+) ENGINE=MyIsam DEFAULT CHARSET=utf8  ROW_FORMAT=PAGE;
 

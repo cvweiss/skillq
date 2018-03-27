@@ -1,5 +1,5 @@
 {% if queue|length > 0 and char.subFlag == "0" %}
-<h4>Skill Queue <small style='font-size: 50%'>Partially trained skills will show wrong SP/Hour because ~CCP~</small></h4>
+<h4>Skill Queue</h4>
 <div class="row hidden-phone">
         <table class="table table-condensed table-striped table-hover table-bordered span10">
                 <thead><tr>
@@ -39,7 +39,7 @@
 <div class="row">
         <div class="span6">
                 <div class="pull-left">
-                        <h4>Skills <em style="font-size: 75%">Total: {{ totalSP|number_format(0) }} SP / {{ skills|length|number_format(0) }} Skills</em></h4>
+                        <h4>Skills <em style="font-size: 75%">Total: {{ totalSP|number_format(0) }} SP / {{ skills|length|number_format(0) }} Skills{% if char.unallocated_sp != 0 %}<span style='color: #800000'> ({{ char.unallocated_sp|number_format(0) }} Unallocated SP){% endif %}</em></h4>
                 </div>
                 <div class="pull-right span1" style="position: relative; bottom: -1.75em;">
         <ul class="nav pull-right hidden-phone">

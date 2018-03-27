@@ -12,5 +12,5 @@ CREATE TABLE `skq_character_assets` (
   `value` decimal(16,2) NOT NULL DEFAULT '0.00',
   `accounted` smallint(1) NOT NULL DEFAULT '0',
   KEY `characterID` (`characterID`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyIsam DEFAULT CHARSET=latin1 ;
 

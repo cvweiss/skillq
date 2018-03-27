@@ -13,7 +13,7 @@ CREATE TABLE `ccp_dgmAttributeTypes` (
   `highIsGood` tinyint(1) DEFAULT NULL,
   `categoryID` tinyint(3) unsigned DEFAULT NULL,
   PRIMARY KEY (`attributeID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=MyIsam DEFAULT CHARSET=utf8 ;
 
 
 LOCK TABLES `ccp_dgmAttributeTypes` WRITE;

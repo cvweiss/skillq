@@ -9,5 +9,5 @@ CREATE TABLE `skq_character_training` (
   `trainingDestinationSP` int(16) NOT NULL,
   `trainingToLevel` tinyint(1) NOT NULL,
   PRIMARY KEY (`characterID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
+) ENGINE=MyIsam DEFAULT CHARSET=utf8  ROW_FORMAT=PAGE;
 

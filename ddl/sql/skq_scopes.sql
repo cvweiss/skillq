@@ -6,5 +6,5 @@ CREATE TABLE `skq_scopes` (
   `refresh_token` varchar(128) DEFAULT NULL,
   `lastChecked` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   UNIQUE KEY `char_scope` (`characterID`,`scope`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyIsam DEFAULT CHARSET=latin1 ;
 

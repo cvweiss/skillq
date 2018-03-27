@@ -8,5 +8,5 @@ CREATE TABLE `skq_plan_skills` (
   `priority` tinyint(1) NOT NULL,
   PRIMARY KEY (`rowID`),
   KEY `planID` (`planID`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyIsam DEFAULT CHARSET=latin1 ;
 

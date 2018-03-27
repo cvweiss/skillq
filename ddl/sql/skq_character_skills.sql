@@ -9,5 +9,5 @@ CREATE TABLE `skq_character_skills` (
   `queue` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`characterID`,`typeID`),
   KEY `characterID` (`characterID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
+) ENGINE=MyIsam DEFAULT CHARSET=utf8  ROW_FORMAT=PAGE;
 

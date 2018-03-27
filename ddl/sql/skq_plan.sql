@@ -6,5 +6,5 @@ CREATE TABLE `skq_plan` (
   `name` varchar(128) NOT NULL,
   PRIMARY KEY (`planID`),
   KEY `userID` (`userID`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyIsam DEFAULT CHARSET=latin1 ;
 

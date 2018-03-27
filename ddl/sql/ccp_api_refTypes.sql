@@ -4,7 +4,7 @@ CREATE TABLE `ccp_api_refTypes` (
   `refTypeID` int(10) NOT NULL,
   `refTypeName` varchar(128) NOT NULL,
   PRIMARY KEY (`refTypeID`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyIsam DEFAULT CHARSET=latin1 ;
 
 
 LOCK TABLES `ccp_api_refTypes` WRITE;

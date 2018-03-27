@@ -78,6 +78,9 @@ function loadSkills($charID, $skills)
 		}
 		Db::execute("update skq_character_info set skillsTrained = :count, skillPoints = :sp where characterID = :charID", [':charID' => $charID, ':count' => count($skills['skills']), ':sp'=> $skills['total_sp']]);
 	}
+	if (isset($skills['unallocated_sp'])) {
+		Db::execute("update skq_character_info set unallocated_sp = :usp where characterID = :charID", [':charID' => $charID, ':usp' => $skills['unallocated_sp']]);
+	}
 }
 
 function loadQueue($charID, $queue)

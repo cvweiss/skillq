@@ -20,5 +20,5 @@ CREATE TABLE `skq_character_wallet` (
   KEY `characterID` (`characterID`),
   KEY `dttm` (`dttm`),
   KEY `characterID_2` (`characterID`,`dttm`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=COMPRESSED;
+) ENGINE=MyIsam DEFAULT CHARSET=latin1  ROW_FORMAT=PAGE;
 
