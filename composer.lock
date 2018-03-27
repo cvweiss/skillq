@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "92b495ba086717b3b3b1adc118f86e25",
+    "content-hash": "e98e99ededac026784f82dbab1a82fc4",
     "packages": [
         {
             "name": "aptoma/twig-markdown",
@@ -62,6 +62,42 @@
                 "twig"
             ],
             "time": "2015-10-23T20:27:08+00:00"
+        },
+        {
+            "name": "cvweiss/guzzler",
+            "version": "v0.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cvweiss/guzzler.git",
+                "reference": "f517ade5384fdbbab9c1484b1f3fe880179bc378"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cvweiss/guzzler/zipball/f517ade5384fdbbab9c1484b1f3fe880179bc378",
+                "reference": "f517ade5384fdbbab9c1484b1f3fe880179bc378",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^6.2"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "cvweiss\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Clinton Weiss",
+                    "email": "cvweiss@gmail.com"
+                }
+            ],
+            "description": "A utility that allows multiples sequences of calls with execution of code between each sequence.",
+            "time": "2017-03-05T22:59:59+00:00"
         },
         {
             "name": "cvweiss/zcache",

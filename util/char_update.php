@@ -3,74 +3,90 @@
 require_once "../init.php";
 
 use zkillboard\crestsso\CrestSSO;
+use cvweiss\Guzzler;
+
+$guzzler = new Guzzler(25, 100);
+
 global $clientID, $secretKey, $callbackURL, $scopes;
 
 $accessTokens = [];
 $errorTokens = [];
 
-$sso = new CrestSSO($clientID, $secretKey, $callbackURL, $scopes);
-
 $minutely = date('Hi');
 while ($minutely == date('Hi')) {
-	$result = Db::query("select * from skq_scopes where lastChecked < date_sub(now(), interval 1 hour) order by lastChecked limit 5");
-	if (sizeof($result) == 0) sleep(1);
-	foreach ($result as $row) {
-		$charID = $row['characterID'];
-		$scope = $row['scope'];
-		$params = ['row' => $row];
-		$refreshToken = $row['refresh_token'];
-		$fields = [];
-
-		$accessToken = null;
-		if ($row['refresh_token'] != '') {
-			$accessToken = isset($accessTokens[$refreshToken]) ? $accessTokens[$refreshToken] : $sso->getAccessToken($refreshToken);
-			if (isset($accessToken['error'])) {
-				if ($accessToken['error'] == 'invalid_token') {
-					Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]); 
-				} else {
-					Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
-					echo "$charID $scope\n";
-					print_r($accessToken);
-				}
-				continue;
-			}
-			$accessTokens[$refreshToken] = $accessToken;
-		}
-		if ($scope == 'publicData' || ($accessToken != null && !isset($accessToken['error']))) {
-			switch ($scope) {
-				case 'esi-skills.read_skills.v1':
-					$url = "https://esi.tech.ccp.is/v4/characters/$charID/skills/";
-					$result = $sso->doCall($url, $fields, $accessToken);
-					loadSkills($charID, json_decode($result, true));
-					break;
-				case 'esi-skills.read_skillqueue.v1':
-					$url = "https://esi.tech.ccp.is/v2/characters/$charID/skillqueue/";
-					$result = $sso->doCall($url, $fields, $accessToken);
-					loadQueue($charID, json_decode($result, true));
-					break;
-				case 'esi-wallet.read_character_wallet':
-					$url = "https://esi.tech.ccp.is/v1/characters/$charID/wallet/";
-					$result = $sso->doCall($url, $fields, $accessToken);
-					loadWallet($charID, json_decode($result, true));
-					break;
-				case 'publicData':
-					$url = "https://esi.tech.ccp.is/v4/characters/$charID/";
-					$result = $sso->doCall($url, $fields, $accessToken);
-					loadPublicData($charID, json_decode($result, true));
-					break;
-				default:
-					echo("Unknown scope: $scope\n");
-			}
-		} else {
-			echo "Failure with $charID $scope $refreshToken\n";
-		}
-		Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
-		Db::execute("update skq_character_info set lastChecked = now() where characterID = :charID", [':charID' => $charID]);
+	$row = Db::queryRow("select * from skq_scopes where lastChecked < date_sub(now(), interval 1 hour) order by lastChecked", [], 0);
+	if (sizeof($row) == 0) { 
+		sleep(1);
+		$guzzler->tick();
+		continue;
 	}
+
+	$charID = $row['characterID'];
+	$refreshToken = $row['refresh_token'];
+        $headers = ['Authorization' =>'Basic ' . base64_encode($clientID . ':' . $secretKey), "Content-Type" => "application/json"];
+        $url = 'https://login.eveonline.com/oauth/token';
+	$params = ['row' => $row];
+
+	$scope = $row['scope'];
+	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
+	
+	$accessToken = $redis->get("at:$charID:$refreshToken");
+	$params['store'] = false;
+	if ($accessToken == null && $row['scope'] != 'publicData') {
+		$params['store'] = true;
+		$guzzler->call($url, "accessTokenSuccess", "accessTokenFail", $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
+		$guzzler->finish();
+	}
+	else accessTokenSuccess($guzzler, $params, json_encode(['access_token' => $accessToken]));
+}
+$guzzler->finish();
+
+function accessTokenSuccess(&$guzzler, &$params, &$content)
+{
+	global $redis;
+
+	$row = $params['row'];
+	$charID = $row['characterID'];
+	$refreshToken = $row['refresh_token'];
+	$scope = $row['scope'];
+	$fields = [];
+
+	$json = json_decode($content, true);
+	$accessToken = @$json['access_token'];
+	$headers = ['Content-Type: application/json'];
+
+	$fields = "?token=" . rawurlencode($accessToken);
+	if ($params['store']) $redis->setex("at:$charID:$refreshToken", 1600, $accessToken);
+
+	switch ($scope) {
+		case 'esi-skills.read_skills.v1':
+			$url = "https://esi.tech.ccp.is/v4/characters/$charID/skills/$fields";
+			$guzzler->call($url, "loadSkills", "fail", $params, $headers);
+			break;
+		case 'esi-skills.read_skillqueue.v1':
+			$url = "https://esi.tech.ccp.is/v2/characters/$charID/skillqueue/$fields";
+			$guzzler->call($url, "loadQueue", "fail", $params, $headers);
+			break;
+		case 'esi-wallet.read_character_wallet':
+			$url = "https://esi.tech.ccp.is/v1/characters/$charID/wallet/$fields";
+			$guzzler->call($url, "loadWallet", "fail", $params, $headers);
+			break;
+		case 'publicData':
+			$url = "https://esi.tech.ccp.is/v4/characters/$charID/";
+			$guzzler->call($url, "loadPublicData", "fail", $params, $headers);
+			break;
+		default:
+			echo("Unknown scope: $scope\n");
+	}
+
+	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
+	Db::execute("update skq_character_info set lastChecked = now() where characterID = :charID", [':charID' => $charID]);
 }
 
-function loadSkills($charID, $skills)
+function loadSkills(&$guzzler, &$params, &$content)
 {
+	$skills = json_decode($content, true);
+	$charID = $params['row']['characterID'];
 	if (isset($skills['skills'])) {
 		foreach ($skills['skills'] as $skill) {
 			Db::execute("insert ignore into skq_character_skills (characterID, typeID) values (:charID, :typeID)", [':charID' => $charID, ':typeID' => $skill['skill_id']]);
@@ -83,8 +99,10 @@ function loadSkills($charID, $skills)
 	}
 }
 
-function loadQueue($charID, $queue)
+function loadQueue(&$guzzler, &$params, &$content) 
 {
+	$queue = json_decode($content, true);
+	$charID = $params['row']['characterID'];
 	if (sizeof($queue) > 0) {
 		$firstV = array_shift(array_slice($queue, 0, 1)); 
 		if (isset($firstV['level_start_sp'])) {
@@ -113,17 +131,39 @@ function loadQueue($charID, $queue)
 	Db::execute("replace into skq_character_training select characterID, startTime, endTime, typeID, startSP, endSP, level from skq_character_queue where characterID = :charID and endTime > now() order by endTime  limit 1", [':charID' => $charID]);
 }
 
-function loadWallet($charID, $wallet)
+function loadWallet(&$guzzler, &$params, &$content)
 {
-	if (is_array($wallet)) return;
+	$wallet = json_decode($content, true);
+	$charID = $params['row']['characterID'];
 	Db::execute("update skq_character_info set balance = :balance where characterID = :charID", [':charID' => $charID, ':balance' => $wallet]);
 }
 
-function loadPublicData($charID, $result)
+function loadPublicData(&$guzzler, &$params, &$content)
 {
+	$result = json_decode($content, true);
+	$charID = $params['row']['characterID'];
 	if (isset($result['name'])) {
 		Db::execute("update skq_character_info set dob = :dob, characterName = :name, bloodline = :bld, ancestry = :race, corporationID = :corp, allianceID = :alli where characterID = :charID", [":charID" => $charID, ":dob" => $result['birthday'], ":name" => $result['name'], ":bld" => $result['bloodline_id'], ":race" => $result['race_id'], ":corp" => (int) @$result['corporation_id'], ':alli' => (int) @$result['alliance_id']]);
 		Db::execute("insert ignore into skq_corporations values (:corpID, :corpName, 0)", [':corpID' => (int) @$result['corporation_id'], ":corpName" => "Pending API Fetch"]);
 		Db::execute("insert ignore into skq_alliances values (:alliID, :alliName, 0)", [':alliID' => (int) @$result['alliance_id'], ':alliName' => "Pending API Fetch"]);
 	}
+}
+
+function getAccessToken(&$guzzler, $refreshToken, $success, $fail, &$params, $clientID, $clientSecret)
+{  
+	$headers = ['Authorization' =>'Basic ' . base64_encode($ccpClientID . ':' . $ccpSecret), "Content-Type" => "application/json"];
+	$url = 'https://login.eveonline.com/oauth/token';
+	$guzzler->call($url, $success, $fail, $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
+}
+
+function accessTokenFail($exception, $params, $other)
+{
+	print_r($exception);
+}
+
+function fail($guzzler, $params, $ex)
+{
+	$code = $ex->getCode();
+	$row = $params['row'];
+	echo "$code " . $row['characterID'] . " " . $row['scope'] . "\n";
 }

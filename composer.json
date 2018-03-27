@@ -8,7 +8,8 @@
         "phpmailer/phpmailer": "*",
 	"cvweiss/zlibrary":"*",
         "zkillboard/crestsso": "^0.0.5",
-        "guzzlehttp/guzzle": "^6.3"
+        "guzzlehttp/guzzle": "^6.3",
+        "cvweiss/guzzler": "^0.0.1"
     },
     "minimum-stability": "stable",
 	"prefer-stable": true
