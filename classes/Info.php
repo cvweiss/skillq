@@ -704,7 +704,7 @@ class Info
         }
 
 	if (isset($element['deltaSP']) && isset($element['deltaTime'])) {
-		$element['spHour'] = $element['deltaSP'] / ($element['deltaTime'] / 3600);
+		$element['spHour'] = floor($element['deltaSP'] / ($element['deltaTime'] / 3600));
 	}
 
         return $element;
