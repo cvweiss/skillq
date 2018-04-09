@@ -51,7 +51,9 @@ function accessTokenSuccess(&$guzzler, &$params, &$content)
 	$redis->setex("at:$charID:$refreshToken", 1600, $accessToken);
 }
 
-function fail($a, $b, $c)
+function fail($guzzler, $params, $ex)
 {
-
+        $code = $ex->getCode();
+        $row = $params['row'];
+        echo "$code " . $row['characterID'] . " " . $row['scope'] . "\n";
 }

@@ -165,5 +165,14 @@ function fail($guzzler, $params, $ex)
 {
 	$code = $ex->getCode();
 	$row = $params['row'];
-	echo "$code " . $row['characterID'] . " " . $row['scope'] . "\n";
+	switch ($code) {
+		case 403:
+			Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
+			break;
+		case 502:
+			// Ignore and try again later
+			break;
+		default:
+			echo "$code " . $row['characterID'] . " " . $row['scope'] . "\n" . @$params['content'] . "\n";
+	}
 }
