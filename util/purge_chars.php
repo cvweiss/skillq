@@ -11,3 +11,14 @@ foreach ($result as $row) {
 	}
 	Db::execute("delete from skq_character_associations where char1 = :charID or char2 = :charID", [':charID' => $charID]);
 }
+
+foreach ($tables as $table) {
+	$result = Db::query("select distinct characterID from $table where characterID not in (select distinct characterID from skq_scopes)");
+	if (sizeof($result)) {
+		echo "$table\n";
+		print_r($result);
+		foreach ($result as $row) {
+			Db::execute("delete from $table where characterID = :charID", [':charID' => $row['characterID']]);
+		}
+	}
+}
