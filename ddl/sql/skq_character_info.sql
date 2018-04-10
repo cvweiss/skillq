@@ -21,6 +21,7 @@ CREATE TABLE `skq_character_info` (
   `walletCachedUntil` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `subFlag` int(1) NOT NULL DEFAULT '0',
   `unallocated_sp` varchar(16) DEFAULT '0',
+  `customOrder` decimal(3,0) DEFAULT '0',
   PRIMARY KEY (`characterID`),
   UNIQUE KEY `character_ID` (`characterID`),
   KEY `characterID` (`characterID`),
