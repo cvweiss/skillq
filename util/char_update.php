@@ -31,6 +31,7 @@ while ($minutely == date('Hi')) {
 	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
 	
 	$accessToken = $redis->get("at:$charID:$refreshToken");
+	if ($accessToken == "pending") $accessToken = null;
 	$params['store'] = false;
 	if ($accessToken == null && $row['scope'] != 'publicData') {
 		$params['store'] = true;
@@ -165,10 +166,17 @@ function fail($guzzler, $params, $ex)
 {
 	$code = $ex->getCode();
 	$row = $params['row'];
+
+	$json = json_decode($params['content'], true);
+	if (@$json['error'] == 'invalid_grant' || @$json['error'] == 'invalid_token') {
+		Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
+	}
+
 	switch ($code) {
 		case 403:
-			Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
+			echo "403 " . $row['characterID'] . " " . $row['scope'] . "\n" . $params['content'] . "\n";
 			break;
+		case 500:
 		case 502:
 			// Ignore and try again later
 			break;

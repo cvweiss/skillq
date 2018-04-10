@@ -55,5 +55,5 @@ function fail($guzzler, $params, $ex)
 {
         $code = $ex->getCode();
         $row = $params['row'];
-        echo "$code " . $row['characterID'] . " " . $row['scope'] . "\n";
+        echo "access token fetch: $code " . $row['characterID'] . " " . $row['scope'] . "\n" . $params['content'] . "\n";
 }
