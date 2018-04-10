@@ -46,7 +46,6 @@ class UserConfig
         if ($value === null) {
             return $defaultValue;
         }
-        $value = json_decode($value, true);
 
         return $value;
     }
