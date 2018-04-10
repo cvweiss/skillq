@@ -19,7 +19,7 @@ foreach ($queues as $queue) {
 	$email    = $email;
 	$name     = $queue["characterName"];
 	$subject  = "$name skill notification."; 
-	$url      = "http://skillq.net/char/" . urlencode($name);
+	$url      = "https://skillq.net/char/" . urlencode($name);
 	$body     = "Your character, <a href='$url'>$name</a>, has less than 24 hours remaining in their skill queue.<br/><br/>-- SkillQ.net";
 	$event    = "${hours}hrQ:$name";
 
