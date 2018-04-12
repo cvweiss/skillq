@@ -130,6 +130,8 @@ function loadQueue(&$guzzler, &$params, &$content)
 		}
 	} 
 	Db::execute("replace into skq_character_training select characterID, startTime, endTime, typeID, startSP, endSP, level from skq_character_queue where characterID = :charID and endTime > now() order by endTime  limit 1", [':charID' => $charID]);
+	$maxQueueTime = Db::queryField("select max(endTime) endTime from skq_character_queue where characterID = :charID", "endTime", [':charID' => $charID]);
+	Db::execute("update skq_character_info set queueFinishes = :endTime where characterID = :charID", [":charID" => $charID, ":endTime" => $maxQueueTime]);
 }
 
 function loadWallet(&$guzzler, &$params, &$content)
@@ -170,12 +172,12 @@ function fail($guzzler, $params, $ex)
 	$json = json_decode($params['content'], true);
 	if (@$json['error'] == 'invalid_grant' || @$json['error'] == 'invalid_token') {
 		Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
+		return;
 	}
 
 	switch ($code) {
 		case 403:
-			echo "403 " . $row['characterID'] . " " . $row['scope'] . "\n" . $params['content'] . "\n";
-			break;
+		case 420:
 		case 500:
 		case 502:
 			// Ignore and try again later
