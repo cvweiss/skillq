@@ -10,6 +10,8 @@ foreach ($queues as $queue) {
 	$chars = findChars($queue['characterID'], $chars);
 	$email = null;
 	foreach ($chars as $charID) {
+		$apiCount = Db::queryField("select count(*) count from skq_scopes where characterID = :charID", "count", ['charID' => $charID]);
+		if ($apiCount < 4) continue;
 		$config = UserConfig::loadUserConfig($charID);
 		$email = @$config['email'];
 		if ($email != null) break;
