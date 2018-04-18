@@ -644,6 +644,8 @@ class Info
                                 break;
                             case "characterID":
                                 $element["characterName"] = Info::getCharName($value);
+				$scopeCount = Db::queryField("select count(*) count from skq_scopes where characterID = :charID", "count", [':charID' => $value], 3);
+				$element['missingScopes'] = ($scopeCount < 4);
                                 break;
                             case "corporationID":
                                 $element["corporationName"] = Info::getCorpName($value);

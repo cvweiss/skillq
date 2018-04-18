@@ -25,7 +25,7 @@
 									</a>
 								</td>
 								<td class="pull-left">
-									<strong><a href="/char/{{ char.characterName|url_encode }}">{{ char.characterName }}</a></strong><br/>
+									<strong><a href="/char/{{ char.characterName|url_encode }}">{{ char.characterName }}{% if char.missingScopes %}<span style='color: red;'> !<span>{% endif %}</a></strong><br/>
 									{{ char.balance|number_format(2) }} ISK<br/>
 									{% if char.typeName and char.subStatus != 'Subscription Expired' %}
 										{% set field = char %} {% include 'components/text_item.html' %}<br/>

@@ -38,4 +38,5 @@ if ($_POST) {
 
 $orderBy = UserConfig::get("orderBy", "skillPoints desc");
 $scopes = Db::query("select * from skq_character_info where characterID in (" . implode(',', $c) . ") order by $orderBy");
+Info::addInfo($scopes);
 return $app->render("manage.html", ["scopes" => $scopes, 'orderBy' => $orderBy]);

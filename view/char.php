@@ -128,10 +128,6 @@ $pageRefresh = max(1, min(3600, $pageRefresh));
 if ($pageRefresh <= 60) {
 	$message = "API update imminent, page will automatically reload in... <span id='pageRefresher'></span>";
 }
-$scopeCount = Db::queryField("select count(*) count from skq_scopes where characterID = :charID", "count", [':charID' => $charID], 0);
-if ($scopeCount < 4 && $message == "") {
-	$message = "Scome scopes are missing! Please re-login this character by using Add Character.";
-}
 
 $totalSP = 0;
 $groupSP = array();
