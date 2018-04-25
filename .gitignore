@@ -5,3 +5,6 @@ notes
 vendor
 .idea
 public/google*.html
+/cron/logs/
+/cron/locks/
+/work/
