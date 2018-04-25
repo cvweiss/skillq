@@ -45,6 +45,7 @@ while ($minutely == date('Hi')) {
 	}
 	$guzzler->tick();
 	sleep(1);
+	if ($redis->llen("skq:esiQueue") > 100) break; // Slow down if we get behind
 }
 $guzzler->finish();
 
@@ -64,6 +65,7 @@ function accessTokenSuccess(&$guzzler, &$params, &$content)
 		$row['accessToken'] = $accessToken;	
 		Db::execute("update skq_scopes set errorCount = 0, lastErrorCode = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
 		$redis->rpush("skq:esiQueue", serialize($row));
+		Util::out("$charID " . $row['scope']);
 	}
 }
 
@@ -73,12 +75,4 @@ function fail($guzzler, $params, $ex)
 	$row = $params['row'];
 
 	Db::execute("update skq_scopes set errorCount = errorCount + 1, lastErrorCode = :code where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
-
-	$json = json_decode($params['content'], true);
-	if (@$json['error'] == 'invalid_grant' || @$json['error'] == 'invalid_token') {
-		//Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
-		return;
-	}
-	//echo "access token fetch: $code " . $row['characterID'] . " " . $row['scope'] . "\n" . $params['content'] . "\n";
-	//print_r($guzzler->getLastHeaders());
 }

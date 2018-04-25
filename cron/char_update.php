@@ -61,7 +61,7 @@ while ($minutely == date('Hi')) {
 			$guzzler->call($url, "loadPublicData", "fail", $params, $headers);
 			break;
 		default:
-			echo("Unknown scope: $scope\n");
+			Util::out("Unknown scope: $scope");
 	}
 
 	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
@@ -163,8 +163,7 @@ return;
 
 	$json = json_decode($params['content'], true);
 	if (@$json['error'] == 'invalid_grant' || @$json['error'] == 'invalid_token') {
-		//Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
-		return;
+		$code = 400;
 	}
 
 	switch ($code) {
@@ -179,6 +178,6 @@ return;
 			// Ignore and try again later
 			break;
 		default:
-			echo "$code " . $row['characterID'] . " " . $row['scope'] . "\n" . @$params['content'] . "\n";
+			Util::out("$code " . $row['characterID'] . " " . $row['scope'] . "\n" . @$params['content']);
 	}
 }

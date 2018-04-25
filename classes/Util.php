@@ -191,4 +191,9 @@ class Util
     {
         return self::$longMonths[$month];
     }
+
+    public static function out($text)
+    {  
+        echo date('Y-m-d H:i:s')." > $text\n";
+    }
 }
