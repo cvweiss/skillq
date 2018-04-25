@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% set netWealth = 0 %}
+{% set netSP = 0 %}
 
 {% block content %}
 	{% if chars %}
@@ -11,6 +12,7 @@
 			<div class="characters span12">
 				{% for char in chars %}
 					{% set netWealth = netWealth + char.balance %}
+					{% set netSP = netSP + char.skillPoints %}
 					<div class="pull-left" style="margin-right: 1em;"><div class="well well-small" style="width: 310px; height: 150px; max-height: 150px;">
 						<table class="table table-condensed table-borderless">
 							<tr>
@@ -27,13 +29,15 @@
 								<td class="pull-left">
 									<strong><a href="/char/{{ char.characterName|url_encode }}">{{ char.characterName }}{% if char.missingScopes %}<span style='color: red;'> !<span>{% endif %}</a></strong><br/>
 									{{ char.balance|number_format(2) }} ISK<br/>
-									{% if char.typeName and char.subStatus != 'Subscription Expired' %}
-										{% set field = char %} {% include 'components/text_item.html' %}<br/>
+									{{ char.skillPoints|number_format(2) }} SP<br/>
+									{% if char.typeName %}
 										<span id="cache{{char.characterID}}"></span>
 										{% if char.queueFinishesSeconds < 86400 and char.queueFinishesSeconds > 0 %}
 											{% set qf = true %}
 											<p class="text-error">Empty Queue: <span id="queueTime{{ char.characterID }}"></span></p>
 										{% else %}
+											<span>{{ char.queueFinishes }}</span><br/>
+											{% set field = char %} {% include 'components/text_item.html' %}<br/>
 											<span id="countdown{{char.characterID}}">{{ char.trainingEndTime }}</span><br/>
 										{% endif %}
 										<script type="text/javascript">
@@ -43,9 +47,6 @@
 											});
 										</script>
 									{% endif %}
-										{% if char.subStatus != "" %}
-											<p class="text-error"><em><strong>{{ char.subStatus }}</strong></em></p>
-										{% endif %}
 								</td>
 							</tr>
 						</table>
@@ -56,7 +57,8 @@
 
 		{% if chars|length > 1 %}
 			<div class="row"><div class="well span3">
-				Net ISK: {{ netWealth|number_format(2) }}
+				Net ISK: {{ netWealth|number_format(2) }}<br/>
+				Net SP: {{ netSP|number_format(2) }}
 			</div></div>
 		{% endif %}
 	{% else %}

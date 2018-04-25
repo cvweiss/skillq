@@ -37,7 +37,7 @@ if (isset($_SESSION['character_id']) && $_SESSION['character_id'] > 0) {
 	$chars = findChars($_SESSION['character_id']);
 	$validChars = $chars;
 	$orderBy = UserConfig::get("orderBy", "skillPoints desc");
-	$chars = Db::query("select distinct i.characterID, characterName, trainingTypeID typeID, trainingToLevel, trainingEndTime, balance, i.cachedUntil, queueFinishes, subFlag from skq_character_info i left join skq_character_training t on (i.characterID = t.characterID) where i.characterID in (" . implode(",", $chars) . ") order by $orderBy");
+	$chars = Db::query("select distinct i.characterID, characterName, trainingTypeID typeID, trainingToLevel, trainingEndTime, balance, skillPoints, i.cachedUntil, queueFinishes, subFlag from skq_character_info i left join skq_character_training t on (i.characterID = t.characterID) where i.characterID in (" . implode(",", $chars) . ") order by $orderBy");
 	$twig->addGlobal("characters", $chars);
 }
 
