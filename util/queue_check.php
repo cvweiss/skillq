@@ -2,6 +2,7 @@
 
 require_once "../init.php";
 
+Db::execute("delete from skq_scopes where errorCount = 10 and lastErrorCode = 400");
 $hours = 24;
 $queues = Db::query("select * from skq_character_info where queueFinishes > now() and queueFinishes < date_add(now(), interval $hours hour)");
 foreach ($queues as $queue) {

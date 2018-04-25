@@ -9,42 +9,27 @@ $guzzler = new Guzzler(25, 100);
 
 global $clientID, $secretKey, $callbackURL, $scopes;
 
-$accessTokens = [];
 $errorTokens = [];
 
 $minutely = date('Hi');
 while ($minutely == date('Hi')) {
-	$row = Db::queryRow("select * from skq_scopes where lastChecked < date_sub(now(), interval 1 hour) order by lastChecked", [], 0);
-	if (sizeof($row) == 0) { 
-		sleep(1);
+	$row = unserialize($redis->lpop("skq:esiQueue"));
+	if ($row == null) {
 		$guzzler->tick();
+		sleep(1);
 		continue;
 	}
 
 	$charID = $row['characterID'];
 	$refreshToken = $row['refresh_token'];
-        $headers = ['Authorization' =>'Basic ' . base64_encode($clientID . ':' . $secretKey), "Content-Type" => "application/json"];
-        $url = 'https://login.eveonline.com/oauth/token';
+	$headers = ['Authorization' =>'Basic ' . base64_encode($clientID . ':' . $secretKey), "Content-Type" => "application/json"];
+	$url = 'https://login.eveonline.com/oauth/token';
 	$params = ['row' => $row];
 
 	$scope = $row['scope'];
 	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
-	
-	$accessToken = $redis->get("at:$charID:$refreshToken");
-	if ($accessToken == "pending") $accessToken = null;
-	$params['store'] = false;
-	if ($accessToken == null && $row['scope'] != 'publicData') {
-		$params['store'] = true;
-		$guzzler->call($url, "accessTokenSuccess", "accessTokenFail", $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
-		$guzzler->finish();
-	}
-	else accessTokenSuccess($guzzler, $params, json_encode(['access_token' => $accessToken]));
-}
-$guzzler->finish();
 
-function accessTokenSuccess(&$guzzler, &$params, &$content)
-{
-	global $redis;
+	$accessToken = @$row['accessToken'];
 
 	$row = $params['row'];
 	$charID = $row['characterID'];
@@ -52,13 +37,12 @@ function accessTokenSuccess(&$guzzler, &$params, &$content)
 	$scope = $row['scope'];
 	$fields = [];
 
-	$json = json_decode($content, true);
-	$accessToken = @$json['access_token'];
+	$accessToken = @$row['accessToken'];
 	$headers = ['Content-Type: application/json'];
 
 	$fields = "?token=" . rawurlencode($accessToken);
-	if ($params['store']) $redis->setex("at:$charID:$refreshToken", 1600, $accessToken);
 
+	$url = "";
 	switch ($scope) {
 		case 'esi-skills.read_skills.v1':
 			$url = "https://esi.tech.ccp.is/v4/characters/$charID/skills/$fields";
@@ -83,9 +67,11 @@ function accessTokenSuccess(&$guzzler, &$params, &$content)
 	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
 	Db::execute("update skq_character_info set lastChecked = now() where characterID = :charID", [':charID' => $charID]);
 }
+$guzzler->finish();
 
 function loadSkills(&$guzzler, &$params, &$content)
 {
+	clearError($params['row']);
 	$skills = json_decode($content, true);
 	$charID = $params['row']['characterID'];
 	if (isset($skills['skills'])) {
@@ -102,6 +88,7 @@ function loadSkills(&$guzzler, &$params, &$content)
 
 function loadQueue(&$guzzler, &$params, &$content) 
 {
+	clearError($params['row']);
 	$queue = json_decode($content, true);
 	$charID = $params['row']['characterID'];
 	if (sizeof($queue) > 0) {
@@ -136,6 +123,7 @@ function loadQueue(&$guzzler, &$params, &$content)
 
 function loadWallet(&$guzzler, &$params, &$content)
 {
+	clearError($params['row']);
 	$wallet = json_decode($content, true);
 	$charID = $params['row']['characterID'];
 	Db::execute("update skq_character_info set balance = :balance where characterID = :charID", [':charID' => $charID, ':balance' => $wallet]);
@@ -143,6 +131,7 @@ function loadWallet(&$guzzler, &$params, &$content)
 
 function loadPublicData(&$guzzler, &$params, &$content)
 {
+	clearError($params['row']);
 	$result = json_decode($content, true);
 	$charID = $params['row']['characterID'];
 	if (isset($result['name'])) {
@@ -159,27 +148,34 @@ function getAccessToken(&$guzzler, $refreshToken, $success, $fail, &$params, $cl
 	$guzzler->call($url, $success, $fail, $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
 }
 
-function accessTokenFail($exception, $params, $other)
+function clearError($row)
 {
-	print_r($exception);
+	Db::execute("update skq_scopes set errorCount = 0, lastErrorCode = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
 }
 
 function fail($guzzler, $params, $ex)
 {
+return;
 	$code = $ex->getCode();
 	$row = $params['row'];
 
+	Db::execute("update skq_scopes set errorCount = errorCount + 1, lastErrorCode = :code where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
+
 	$json = json_decode($params['content'], true);
 	if (@$json['error'] == 'invalid_grant' || @$json['error'] == 'invalid_token') {
-		Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
+		//Db::execute("delete from skq_scopes where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
 		return;
 	}
 
 	switch ($code) {
 		case 403:
 		case 420:
-		case 500:
 		case 502:
+			// Try again in 5 minutes
+			Db::execute("update skq_scopes set lastChecked = date_sub(lastChecked, interval 55 minute) where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
+			break;
+		case 400:
+		case 500:
 			// Ignore and try again later
 			break;
 		default:
