@@ -155,7 +155,6 @@ function clearError($row)
 
 function fail($guzzler, $params, $ex)
 {
-return;
 	$code = $ex->getCode();
 	$row = $params['row'];
 
