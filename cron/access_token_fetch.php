@@ -17,7 +17,8 @@ $minutely = date('Hi');
 while ($minutely == date('Hi')) {
 	$result = Db::query("select characterID, scope, refresh_token from skq_scopes where lastChecked < date_sub(now(), interval 60 minute) and errorCount < 10 order by lastChecked", [], 0);
 	foreach ($result as $row) {
-		if ($minutely != date('Hi')) break;
+		if ($minutely != date('Hi') || $redis->llen("skq:esiQueue") > 100) break;
+
 		$charID = $row['characterID'];
 		$scope = $row['scope'];
 		$refreshToken = $row['refresh_token'];
@@ -45,7 +46,6 @@ while ($minutely == date('Hi')) {
 	}
 	$guzzler->tick();
 	sleep(1);
-	if ($redis->llen("skq:esiQueue") > 100) break; // Slow down if we get behind
 }
 $guzzler->finish();
 
@@ -65,7 +65,6 @@ function accessTokenSuccess(&$guzzler, &$params, &$content)
 		$row['accessToken'] = $accessToken;	
 		Db::execute("update skq_scopes set errorCount = 0, lastErrorCode = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
 		$redis->rpush("skq:esiQueue", serialize($row));
-		Util::out("$charID " . $row['scope']);
 	}
 }
 
