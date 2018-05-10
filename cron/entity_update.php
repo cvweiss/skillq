@@ -12,7 +12,7 @@ Db::execute("delete from skq_alliances where allianceID = 0");
 
 $minute = date("Hi");
 while ($minute == date("Hi")) {
-	$corps = Db::query("select * from skq_corporations where lastUpdate < date_sub(now(), interval 24 hour)");
+	$corps = Db::query("select * from skq_corporations where lastUpdate < date_sub(now(), interval 24 hour) order by lastUpdate limit 10");
 	foreach ($corps as $corp) {
 		$corpID = $corp['corporationID'];
 		$url = "https://esi.tech.ccp.is/v4/corporations/$corpID/";
@@ -25,7 +25,7 @@ while ($minute == date("Hi")) {
 		timeCheck($minute);
 		sleep(1);
 	}
-	$allis = Db::query("select * from skq_alliances where lastUpdate < date_sub(now(), interval 24 hour)");
+	$allis = Db::query("select * from skq_alliances where lastUpdate < date_sub(now(), interval 24 hour) order by lastUpdate limit 10");
 	foreach ($allis as $alli) {
 		$alliID = $alli['allianceID'];
 		$url = "https://esi.tech.ccp.is/v3/alliances/$alliID/";
