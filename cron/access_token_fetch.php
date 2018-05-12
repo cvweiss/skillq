@@ -30,7 +30,7 @@ while ($minutely == date('Hi')) {
 			continue;
 		}
 		$redis->setex($key, 120, "pending");
-		Util::out("SSO: " . substr("$charID", strlen("$charID") - 4, 4) . " $scope");
+		Util::out("  SSO: " . substr("$charID", strlen("$charID") - 6, 6) . " $scope");
 
 		$headers = ['Authorization' =>'Basic ' . base64_encode($clientID . ':' . $secretKey), "Content-Type" => "application/json"];
 		$url = 'https://login.eveonline.com/oauth/token';

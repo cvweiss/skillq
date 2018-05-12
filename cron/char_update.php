@@ -28,7 +28,7 @@ while ($minutely == date('Hi')) {
 
 	$scope = $row['scope'];
 	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
-	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 4, 4) . " $scope");
+	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " $scope");
 
 	$accessToken = @$row['accessToken'];
 
