@@ -22,8 +22,6 @@ while ($minute == date("Hi")) {
 			$name = $json['name'];
 			Db::execute("update skq_corporations set corporationName = :name, lastUpdate = now() where corporationID = :id", [':id' => $corpID, ':name' => $name]);
 		}
-		timeCheck($minute);
-		sleep(1);
 	}
 	$allis = Db::query("select * from skq_alliances where lastUpdate < date_sub(now(), interval 24 hour) order by lastUpdate limit 10");
 	foreach ($allis as $alli) {
@@ -35,13 +33,6 @@ while ($minute == date("Hi")) {
 			$name = $json['name'];
 			Db::execute("update skq_alliances set allianceName = :name, lastUpdate = now() where allianceID = :id", [':id' => $alliID, ':name' => $name]);
 		}
-		timeCheck($minute);
-		sleep(1);
 	}
 	sleep(1);
-}
-
-function timeCheck($minute)
-{
-	return $minute == date("Hi") ? true : exit();
 }
