@@ -13,7 +13,7 @@ class Registration
     public static function canRegister($email, $username)
     {
         $check = Db::queryField(
-          "SELECT count(*) count FROM skq_users WHERE email = :email OR username = :username",
+          "SELECT count(*) count FROM skq_users WHERE email = :email OR characterID = :username",
           "count",
           array(":email" => $email, ":username" => $username),
           0
@@ -31,7 +31,7 @@ class Registration
     {
         global $siteName;
         $check = Db::queryField(
-          "SELECT count(*) count FROM skq_users WHERE email = :email OR username = :username",
+          "SELECT count(*) count FROM skq_users WHERE email = :email OR characterID = :username",
           "count",
           array(":email" => $email, ":username" => $username),
           0
@@ -39,7 +39,7 @@ class Registration
         if ($check == 0) {
             $hashedpassword = Password::genPassword($password);
             Db::execute(
-              "INSERT INTO skq_users (username, password, email) VALUES (:username, :password, :email)",
+              "INSERT INTO skq_users (characterID, password, email) VALUES (:username, :password, :email)",
               array(":username" => $username, ":password" => $hashedpassword, ":email" => $email)
             );
             $subject = "$siteName Registration";

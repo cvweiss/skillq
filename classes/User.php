@@ -51,7 +51,7 @@ class User
     {
         $password = Password::genPassword($password);
         $check    = Db::queryField(
-          "SELECT username FROM skq_users WHERE password = :password AND username = :username",
+          "SELECT username FROM skq_users WHERE password = :password AND characterID = :username",
           "username",
           array(":username" => $username, ":password" => $password),
           1
@@ -71,7 +71,7 @@ class User
     public static function checkLoginHashed($username, $password)
     {
         $check = Db::queryField(
-          "SELECT username FROM skq_users WHERE password = :password AND username = :username",
+          "SELECT username FROM skq_users WHERE password = :password AND characterID = :username",
           "username",
           array(":username" => $username, ":password" => $password),
           1
@@ -121,7 +121,7 @@ class User
     {
         if (isset($_SESSION["loggedin"])) {
             $id = Db::query(
-              "SELECT id, username, email, dateCreated, admin, moderator FROM skq_users WHERE username = :username",
+              "SELECT id, characterID, email, dateCreated, admin, moderator FROM skq_users WHERE characterID = :username",
               array(":username" => $_SESSION["loggedin"]),
               1
             );
@@ -146,7 +146,7 @@ class User
     {
         if (isset($_SESSION["loggedin"])) {
             $id = Db::queryField(
-              "SELECT id FROM skq_users WHERE username = :username",
+              "SELECT id FROM skq_users WHERE characterID = :username",
               "id",
               array(":username" => $_SESSION["loggedin"]),
               1

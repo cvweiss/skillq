@@ -22,7 +22,7 @@ class UserConfig
     public static function loadUserConfig($id)
     {
         UserConfig::$userConfig = array();
-        $result                 = Db::query("select * from skq_users_config where id = :id", array(":id" => $id), 0);
+        $result                 = Db::query("select * from skq_users_config where characterID = :id", array(":id" => $id), 0);
         foreach ($result as $row) {
             UserConfig::$userConfig[$row["key"]] = json_decode($row["value"], true);
         }
@@ -64,10 +64,10 @@ class UserConfig
 
         if (is_null($value) || $value === $default || (is_string($value) && strlen(trim($value)) == 0)) {
             // Just remove the row and let the defaults take over
-            return Db::execute("delete from skq_users_config where id = :id and `key` = :key", [':id' => $id, ':key' => $key]);
+            return Db::execute("delete from skq_users_config where characterID = :id and `key` = :key", [':id' => $id, ':key' => $key]);
         }
 
 	$value = json_encode($value);
-        return Db::execute("insert into skq_users_config (id, `key`, `value`) values (:id, :key, :value) on duplicate key update `value` = :value", [":id" => $id, ":key" => $key, ":value" => $value]);
+        return Db::execute("insert into skq_users_config (characterID, `key`, `value`) values (:id, :key, :value) on duplicate key update `value` = :value", [":id" => $id, ":key" => $key, ":value" => $value]);
     }
 }
