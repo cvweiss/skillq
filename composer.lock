@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e98e99ededac026784f82dbab1a82fc4",
+    "content-hash": "0f0c9fc89883c81153327bb0aa114793",
     "packages": [
         {
             "name": "aptoma/twig-markdown",
@@ -65,16 +65,16 @@
         },
         {
             "name": "cvweiss/guzzler",
-            "version": "v0.0.1",
+            "version": "v0.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/cvweiss/guzzler.git",
-                "reference": "f517ade5384fdbbab9c1484b1f3fe880179bc378"
+                "reference": "d56b293064d5d949d1d8554b391c240f1d2b54f9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/cvweiss/guzzler/zipball/f517ade5384fdbbab9c1484b1f3fe880179bc378",
-                "reference": "f517ade5384fdbbab9c1484b1f3fe880179bc378",
+                "url": "https://api.github.com/repos/cvweiss/guzzler/zipball/d56b293064d5d949d1d8554b391c240f1d2b54f9",
+                "reference": "d56b293064d5d949d1d8554b391c240f1d2b54f9",
                 "shasum": ""
             },
             "require": {
@@ -97,7 +97,7 @@
                 }
             ],
             "description": "A utility that allows multiples sequences of calls with execution of code between each sequence.",
-            "time": "2017-03-05T22:59:59+00:00"
+            "time": "2018-05-12T22:30:40+00:00"
         },
         {
             "name": "cvweiss/zcache",
