@@ -48,7 +48,7 @@ if ($_POST) {
         $message = "Invalid character selection.";
     }
 
-    if ($message === null) {
+    if ($message === "") {
         Db::execute(
           "insert into skq_character_shares (userID, shareID, characterID, expirationTime) values
                                   (:userID, :shareID, :charID, date_add(now(), interval 3 day))",
