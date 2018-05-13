@@ -112,8 +112,8 @@ function loadQueue(&$guzzler, &$params, &$content)
 							":endTime"   => @$qs['finish_date']
 						     )
 					   );
-				Db::execute("update skq_character_skills set queue = :level where characterID = :charID and typeID = :typeID",
-						[":charID" => $charID, ":typeID" => $qs['skill_id'], ":level" => $qs['finished_level']]);
+				Db::execute("update skq_character_skills set queue = :level where characterID = :charID and typeID = :typeID and :endTime > now() and queue = 0",
+						[":charID" => $charID, ":typeID" => $qs['skill_id'], ":level" => $qs['finished_level'], ':endTime' => @$qs['finish_date']]);
 			}
 		}
 	} 
