@@ -1,6 +1,6 @@
 <?php
 
-require_once "../../init.php";
+require_once "../init.php";
 
 $result = Db::query("select * from (select characterID, count(*) count from skq_scopes group by 1) as foo where count = 1");
 $tables = ['skq_character_assets', 'skq_character_certs', 'skq_character_implants', 'skq_character_info', 'skq_character_queue', 'skq_character_shares', 'skq_character_skills', 'skq_character_training', 'skq_character_wallet', 'skq_scopes', 'skq_users', 'skq_users_config'];
