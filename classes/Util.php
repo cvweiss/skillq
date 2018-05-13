@@ -6,34 +6,6 @@
 class Util
 {
     /**
-     * @param string $keyID
-     * @param string $vCode
-     * @return Pheal
-     */
-    public static function getPheal($keyID = null, $vCode = null)
-    {
-        PhealConfig::getInstance()->http_method     = "curl";
-        PhealConfig::getInstance()->http_user_agent = "API Fetcher for http://skillq.net";
-        PhealConfig::getInstance()->http_post       = false;
-        PhealConfig::getInstance()->http_keepalive  = true; // default 15 seconds
-        PhealConfig::getInstance()->http_keepalive  = 10; // KeepAliveTimeout in seconds
-        PhealConfig::getInstance()->http_timeout    = 30;
-        //if ($phealCacheLocation != null) PhealConfig::getInstance()->cache = new PhealFileCache($phealCacheLocation);
-        //PhealConfig::getInstance()->log = new PhealLogger();
-        PhealConfig::getInstance()->api_customkeys = true;
-        //PhealConfig::getInstance()->api_base = $apiServer;
-
-
-        if ($keyID == null || $vCode == null) {
-            $pheal = new Pheal();
-        } else {
-            $pheal = new Pheal($keyID, $vCode);
-        }
-
-        return $pheal;
-    }
-
-    /**
      * @param string $string
      * @return string
      */

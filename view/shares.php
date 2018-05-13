@@ -11,7 +11,7 @@ $userID = $_SESSION['character_id'];
 
 Db::execute("delete from skq_character_shares where expirationTime < now()");
 
-$message = null;
+$message = "";
 if ($_POST) {
     $charID = $_POST["characterid"];
 
@@ -44,7 +44,7 @@ if ($_POST) {
         }
     }
 
-    if ($message == null && !$validChar) {
+    if ($message === ""  && $validChar === false) {
         $message = "Invalid character selection.";
     }
 

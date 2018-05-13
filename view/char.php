@@ -122,8 +122,8 @@ foreach ($queue as $skill) {
 
 $message = "";
 $pageRefresh = 3600;
-$lastChecked = Db::queryField("select unix_timestamp(min(lastChecked)) lastChecked from skq_scopes where characterID = :charID", "lastChecked", [':charID' => $charID], 0);
-$pageRefresh = $lastChecked == 0 ? 1 : 3600 - (time() - $lastChecked);
+$lastChecked = (int) Db::queryField("select unix_timestamp(min(lastChecked)) lastChecked from skq_scopes where characterID = :charID", "lastChecked", [':charID' => $charID], 0);
+$pageRefresh = $lastChecked === 0 ? 1 : 3600 - (time() - $lastChecked);
 $pageRefresh = max(1, min(3600, $pageRefresh));
 if ($pageRefresh <= 60) {
 	$message = "API update imminent, page will automatically reload in... <span id='pageRefresher'></span>";

@@ -46,10 +46,10 @@ class UserGlobals extends Twig_Extension
      */
     private function addGlobal(&$array, $key, $value, $defaultValue = null)
     {
-        if ($value == null && $defaultValue == null) {
+        if ($value == null && $defaultValue === null) {
             return;
         } else {
-            if ($value == null) {
+            if ($value === null) {
                 $array[$key] = $defaultValue;
             } else {
                 $array[$key] = $value;

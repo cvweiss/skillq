@@ -223,26 +223,6 @@ class Info
     }
 
     /**
-     * @param $systemID
-     * @return int|null|string
-     */
-    public static function getRegionInfoFromSystemID($systemID)
-    {
-        $regionID = Db::queryField(
-          "select regionID from ccp_systems where solarSystemID = :systemID",
-          "regionID",
-          array(":systemID" => $systemID),
-          60
-        );
-
-        return Db::queryRow(
-          "select * from ccp_regions where regionID = :regionID",
-          array(":regionID" => $regionID),
-          60
-        );
-    }
-
-    /**
      * @param $name
      * @return int|null|string
      */
@@ -425,20 +405,6 @@ class Info
       array("system", "select solarSystemID from ccp_systems where solarSystemName "),
       array("region", "select regionID from ccp_regions where regionName "),
     );
-
-    /**
-     * @param $id
-     * @return mixed
-     */
-    public static function getPilotDetails($id)
-    {
-        $data                  = array();
-        $data["characterID"]   = $id;
-        $data["characterName"] = Info::getCharName($id, true);
-        Info::addInfo($data);
-
-        return Summary::getPilotSummary($data, $id);
-    }
 
     /**
      * @param $id

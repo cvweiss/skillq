@@ -26,8 +26,8 @@ foreach ($queues as $queue) {
 	$body     = "Your character, <a href='$url'>$name</a>, has less than 24 hours remaining in their skill queue.<br/><br/>-- SkillQ.net";
 	$event    = "${hours}hrQ:$name";
 
-	$count = Db::queryField("select count(*) count from skq_email_history where email = :email and event = :event", "count", [':email' => $email, ':event' => $event]);
-	if ($count == 0) {
+	$count = (int) Db::queryField("select count(*) count from skq_email_history where email = :email and event = :event", "count", [':email' => $email, ':event' => $event]);
+	if ($count === 0) {
 		CreateEmail::create($email, $subject, $body);
 		Db::execute("insert into skq_email_history (email, event, expireTime) values (:email, :event, date_add(now(), interval 24 hour))", [":email" => $email, ":event" => $event]);
 	}
