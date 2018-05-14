@@ -7,6 +7,6 @@ CREATE TABLE `skq_users_config` (
   UNIQUE KEY `id` (`characterID`,`key`),
   KEY `id_2` (`characterID`),
   KEY `key` (`key`)
-) ENGINE=MyIsam DEFAULT CHARSET=utf8  ROW_FORMAT=PAGE;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8  ROW_FORMAT=COMPRESSED;
 
 

@@ -8,5 +8,5 @@ CREATE TABLE `skq_users` (
   PRIMARY KEY (`userID`),
   UNIQUE KEY `username` (`characterID`),
   KEY `login_index` (`characterID`)
-) ENGINE=MyIsam DEFAULT CHARSET=utf8  ROW_FORMAT=PAGE;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8  ROW_FORMAT=COMPRESSED;
 

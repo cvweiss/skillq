@@ -7,5 +7,5 @@ CREATE TABLE `skq_api_account` (
   `logonCount` int(16) DEFAULT NULL,
   `logonMinutes` int(16) DEFAULT NULL,
   PRIMARY KEY (`keyRowID`)
-) ENGINE=MyIsam DEFAULT CHARSET=latin1  ROW_FORMAT=PAGE;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1  ROW_FORMAT=COMPRESSED;
 

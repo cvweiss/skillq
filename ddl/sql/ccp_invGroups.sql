@@ -12,7 +12,7 @@ CREATE TABLE `ccp_invGroups` (
   `published` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`groupID`),
   KEY `ix_invGroups_categoryID` (`categoryID`)
-) ENGINE=MyIsam DEFAULT CHARSET=utf8 ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
 
 
 LOCK TABLES `ccp_invGroups` WRITE;

@@ -6,5 +6,5 @@ CREATE TABLE `skq_alliances` (
   `lastUpdate` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`allianceID`),
   KEY `allianceName` (`allianceName`)
-) ENGINE=MyIsam DEFAULT CHARSET=latin1  ROW_FORMAT=PAGE;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1  ROW_FORMAT=COMPRESSED;
 

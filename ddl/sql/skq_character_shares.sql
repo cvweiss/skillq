@@ -10,5 +10,5 @@ CREATE TABLE `skq_character_shares` (
   KEY `characterID` (`characterID`),
   KEY `expirationTime` (`expirationTime`),
   KEY `userID` (`userID`)
-) ENGINE=MyIsam DEFAULT CHARSET=latin1  ROW_FORMAT=PAGE;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1  ROW_FORMAT=COMPRESSED;
 

@@ -10,5 +10,5 @@ CREATE TABLE `skq_item_history` (
   `volume` bigint(16) NOT NULL,
   PRIMARY KEY (`typeID`,`regionID`,`priceDate`),
   KEY `regionID` (`regionID`)
-) ENGINE=MyIsam DEFAULT CHARSET=latin1  ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1  ROW_FORMAT=DYNAMIC;
 

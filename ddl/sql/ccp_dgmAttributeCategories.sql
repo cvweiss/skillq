@@ -5,7 +5,7 @@ CREATE TABLE `ccp_dgmAttributeCategories` (
   `categoryName` varchar(100) DEFAULT NULL,
   `categoryDescription` varchar(400) DEFAULT NULL,
   PRIMARY KEY (`categoryID`)
-) ENGINE=MyIsam DEFAULT CHARSET=utf8 ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
 
 
 LOCK TABLES `ccp_dgmAttributeCategories` WRITE;

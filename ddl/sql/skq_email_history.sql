@@ -5,5 +5,5 @@ CREATE TABLE `skq_email_history` (
   `event` varchar(64) NOT NULL,
   `expireTime` datetime NOT NULL,
   PRIMARY KEY (`email`,`event`)
-) ENGINE=MyIsam DEFAULT CHARSET=latin1  ROW_FORMAT=PAGE;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1  ROW_FORMAT=COMPRESSED;
 

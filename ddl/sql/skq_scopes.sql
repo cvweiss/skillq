@@ -8,5 +8,5 @@ CREATE TABLE `skq_scopes` (
   `lastErrorCode` decimal(4,0) NOT NULL DEFAULT '0',
   `errorCount` decimal(2,0) NOT NULL DEFAULT '0',
   UNIQUE KEY `char_scope` (`characterID`,`scope`)
-) ENGINE=MyIsam DEFAULT CHARSET=latin1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 ;
 

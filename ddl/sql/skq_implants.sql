@@ -9,5 +9,5 @@ CREATE TABLE `skq_implants` (
   `perception` tinyint(1) NOT NULL,
   `willpower` tinyint(1) NOT NULL,
   PRIMARY KEY (`typeID`)
-) ENGINE=MyIsam DEFAULT CHARSET=latin1  ROW_FORMAT=PAGE;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1  ROW_FORMAT=COMPRESSED;
 

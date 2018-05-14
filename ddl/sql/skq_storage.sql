@@ -4,5 +4,5 @@ CREATE TABLE `skq_storage` (
   `locker` varchar(64) CHARACTER SET latin1 NOT NULL,
   `contents` varchar(256) CHARACTER SET latin1 NOT NULL,
   PRIMARY KEY (`locker`)
-) ENGINE=MyIsam DEFAULT CHARSET=utf8  ROW_FORMAT=PAGE;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8  ROW_FORMAT=COMPRESSED;
 
