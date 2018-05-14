@@ -26,7 +26,7 @@ if ($_POST) {
 		return;
 	}
 	$orderBy = (string) @$_POST['orderBy'];
-	if (in_array($orderBy, ['characterName', 'balance desc', 'skillPoints desc', 'customOrder'])) {
+	if (in_array($orderBy, ['characterName', 'balance desc', 'skillPoints desc', 'queueFinishes', 'customOrder'])) {
 		UserConfig::set('orderBy', $orderBy);
 		foreach ($c as $charID) {
 			$custom = (int) $_POST["custom-$charID"];
