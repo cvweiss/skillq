@@ -16,17 +16,13 @@
 					<div class="pull-left" style="margin-right: 1em;"><div class="well well-small" style="width: 310px; height: 150px; max-height: 150px;">
 						<table class="table table-condensed table-borderless">
 							<tr>
-								<td style="width: 128px;" class="hidden-phone">
+								<td>
 									<a href="/char/{{ char.characterName|url_encode }}">
-										<img src="{{ image_character }}{{ char.characterID }}_128.jpg" class="hidden-phone" style="height: 128px; width: 128px;">
+										<img class="hidden-phone" src="{{ image_character }}{{ char.characterID }}_128.jpg" class="hidden-phone" style="height: 128px; width: 128px;">
+										<img class="visible-phone" src="{{ image_character }}{{ char.characterID }}_64.jpg" class="visible-phone" style="height: 64px; width: 64px;">
 									</a>
 								</td>
-								<td style="width: 64px;" class="visible-phone">
-									<a href="/char/{{ char.characterName|url_encode }}">
-										<img src="{{ image_character }}{{ char.characterID }}_64.jpg" class="visible-phone" style="height: 64px; width: 64px;">
-									</a>
-								</td>
-								<td class="pull-left">
+								<td>
 									<strong><a href="/char/{{ char.characterName|url_encode }}">{{ char.characterName }}{% if char.missingScopes %}<span style='color: red;'> !<span>{% endif %}</a></strong><br/>
 									{{ char.balance|number_format(2) }} ISK<br/>
 									{{ char.skillPoints|number_format(0) }} SP<br/><small>
