@@ -5,7 +5,7 @@ require_once "../init.php";
 use zkillboard\crestsso\CrestSSO;
 use cvweiss\Guzzler;
 
-$guzzler = new Guzzler(25, 100);
+$guzzler = new Guzzler(50, 100);
 
 global $clientID, $secretKey, $callbackURL, $scopes;
 
@@ -27,9 +27,6 @@ while ($minutely == date('Hi')) {
 	$params = ['row' => $row];
 
 	$scope = $row['scope'];
-	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
-	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " $scope");
-
 	$accessToken = @$row['accessToken'];
 
 	$row = $params['row'];
@@ -64,9 +61,6 @@ while ($minutely == date('Hi')) {
 		default:
 			Util::out("Unknown scope: $scope");
 	}
-
-	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $scope]);
-	Db::execute("update skq_character_info set lastChecked = now() where characterID = :charID", [':charID' => $charID]);
 }
 $guzzler->finish();
 
@@ -85,6 +79,8 @@ function loadSkills(&$guzzler, &$params, &$content)
 	if (isset($skills['unallocated_sp'])) {
 		Db::execute("update skq_character_info set unallocated_sp = :usp where characterID = :charID", [':charID' => $charID, ':usp' => $skills['unallocated_sp']]);
 	}
+	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
+	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skills.v1");
 }
 
 function loadQueue(&$guzzler, &$params, &$content) 
@@ -120,6 +116,8 @@ function loadQueue(&$guzzler, &$params, &$content)
 	Db::execute("replace into skq_character_training select characterID, startTime, endTime, typeID, startSP, endSP, level from skq_character_queue where characterID = :charID and endTime > now() order by endTime  limit 1", [':charID' => $charID]);
 	$maxQueueTime = Db::queryField("select max(endTime) endTime from skq_character_queue where characterID = :charID", "endTime", [':charID' => $charID]);
 	Db::execute("update skq_character_info set queueFinishes = :endTime where characterID = :charID", [":charID" => $charID, ":endTime" => $maxQueueTime]);
+	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
+	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skillqueue.v1");
 }
 
 function loadWallet(&$guzzler, &$params, &$content)
@@ -128,6 +126,8 @@ function loadWallet(&$guzzler, &$params, &$content)
 	$wallet = json_decode($content, true);
 	$charID = $params['row']['characterID'];
 	Db::execute("update skq_character_info set balance = :balance where characterID = :charID", [':charID' => $charID, ':balance' => $wallet]);
+	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
+	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-wallet.read_character_wallet");
 }
 
 function loadPublicData(&$guzzler, &$params, &$content)
@@ -136,17 +136,12 @@ function loadPublicData(&$guzzler, &$params, &$content)
 	$result = json_decode($content, true);
 	$charID = $params['row']['characterID'];
 	if (isset($result['name'])) {
-		Db::execute("update skq_character_info set dob = :dob, characterName = :name, bloodline = :bld, ancestry = :race, corporationID = :corp, allianceID = :alli where characterID = :charID", [":charID" => $charID, ":dob" => $result['birthday'], ":name" => $result['name'], ":bld" => $result['bloodline_id'], ":race" => $result['race_id'], ":corp" => (int) @$result['corporation_id'], ':alli' => (int) @$result['alliance_id']]);
+		Db::execute("update skq_character_info set characterName = :name, corporationID = :corp, allianceID = :alli where characterID = :charID", [":charID" => $charID, ":name" => $result['name'], ":corp" => (int) @$result['corporation_id'], ':alli' => (int) @$result['alliance_id']]);
 		Db::execute("insert ignore into skq_corporations values (:corpID, :corpName, 0)", [':corpID' => (int) @$result['corporation_id'], ":corpName" => "Pending API Fetch"]);
 		Db::execute("insert ignore into skq_alliances values (:alliID, :alliName, 0)", [':alliID' => (int) @$result['alliance_id'], ':alliName' => "Pending API Fetch"]);
 	}
-}
-
-function getAccessToken(&$guzzler, $refreshToken, $success, $fail, &$params, $clientID, $clientSecret)
-{  
-	$headers = ['Authorization' =>'Basic ' . base64_encode($ccpClientID . ':' . $ccpSecret), "Content-Type" => "application/json"];
-	$url = 'https://login.eveonline.com/oauth/token';
-	$guzzler->call($url, $success, $fail, $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
+	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
+	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " publicData");
 }
 
 function clearError($row)
@@ -167,15 +162,13 @@ function fail($guzzler, $params, $ex)
 	}
 
 	switch ($code) {
+		case 400:
 		case 403:
 		case 420:
+		case 500:
 		case 502:
 			// Try again in 5 minutes
-			Db::execute("update skq_scopes set lastChecked = date_sub(lastChecked, interval 55 minute) where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
-			break;
-		case 400:
-		case 500:
-			// Ignore and try again later
+			Db::execute("update skq_scopes set lastChecked = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
 			break;
 		default:
 			Util::out("$code " . $row['characterID'] . " " . $row['scope'] . "\n" . @$params['content']);

@@ -12,43 +12,32 @@ global $clientID, $secretKey, $callbackURL, $scopes;
 $accessTokens = [];
 $errorTokens = [];
 
+$i = [];
 Db::execute("update skq_scopes set lastChecked = 0 where errorCount > 0 and lastErrorCode in (403, 502)");
 $minutely = date('Hi');
 while ($minutely == date('Hi')) {
-	$result = Db::query("select characterID, scope, refresh_token from skq_scopes where lastChecked < date_sub(now(), interval 60 minute) and errorCount < 10 order by lastChecked", [], 0);
-	foreach ($result as $row) {
-		if ($minutely != date('Hi') || $redis->llen("skq:esiQueue") > 100) break;
-
+	$exclude = implode(",", $i);
+	$notIn = sizeof($i) > 0 ? " and characterID not in (" . implode(",", $i) . ") " : "";
+	$row = Db::queryRow("select characterID, scope, refresh_token from skq_scopes where lastChecked < date_sub(now(), interval 60 minute) and errorCount < 10 and refresh_token != '' $notIn order by lastChecked limit 1", [], 0);
+	if (sizeof($row) != 0) {
 		$charID = $row['characterID'];
-		$scope = $row['scope'];
 		$refreshToken = $row['refresh_token'];
 
-		$key = "skq:$charID:$refreshToken";
-
-		$curValue = $redis->get($key);
-		if ($curValue != false) {
-			continue;
-		}
-		$redis->setex($key, 120, "pending");
-		Util::out("  SSO: " . substr("$charID", strlen("$charID") - 6, 6) . " $scope");
+		if (in_array($charID, $i)) { echo "breaking on $charID\n"; sleep(1); continue; }
+		$i[] = $charID;
 
 		$headers = ['Authorization' =>'Basic ' . base64_encode($clientID . ':' . $secretKey), "Content-Type" => "application/json"];
 		$url = 'https://login.eveonline.com/oauth/token';
 		$params = ['row' => $row];
 
-		$scope = $row['scope'];
-
-		$accessToken = $redis->get("at:$charID:$refreshToken");
-		$params['store'] = false;
-		if ($row['scope'] == 'publicData') $redis->rpush("skq:esiQueue", serialize($row));
-		else {
-			$guzzler->call($url, "accessTokenSuccess", "fail", $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
-		}
-	}
+		$guzzler->call($url, "accessTokenSuccess", "fail", $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
+		Util::out("  SSO: " . substr("$charID", strlen("$charID") - 6, 6));
+	} else sleep(1);
 	$guzzler->tick();
-	sleep(1);
+	while ($redis->llen("skq:esiQueue") > 100) usleep(100000);
 }
 $guzzler->finish();
+while ($redis->llen("skq:esiQueue") > 0) usleep(100000);
 
 function accessTokenSuccess(&$guzzler, &$params, &$content)
 {
@@ -61,7 +50,7 @@ function accessTokenSuccess(&$guzzler, &$params, &$content)
 	$json = json_decode($content, true);
 	$accessToken = @$json['access_token'];
 
-	$scopes = Db::query("select * from skq_scopes where characterID = :charID and refresh_token = :rt", [':charID' => $charID, ':rt' => $refreshToken]);
+	$scopes = Db::query("select * from skq_scopes where characterID = :charID", [':charID' => $charID]);
 	foreach ($scopes as $row) {
 		$row['accessToken'] = $accessToken;	
 		Db::execute("update skq_scopes set errorCount = 0, lastErrorCode = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
@@ -73,6 +62,20 @@ function fail($guzzler, $params, $ex)
 {
 	$code = $ex->getCode();
 	$row = $params['row'];
+
+	switch ($code) {
+		case 0:
+		case 502:
+			Db::execute("update skq_scopes set lastChecked = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
+			break;
+		case 400:
+			if (strpos($ex->getMessage(), "invalid_token") !== false) {
+				// Delete twice as quick
+				Db::execute("update skq_scopes set errorCount = errorCount + 1, lastErrorCode = :code where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
+			}
+		default:
+			Util::out($code . " " . $ex->getMessage(). "\n" . print_r($row, true));
+	}
 
 	Db::execute("update skq_scopes set errorCount = errorCount + 1, lastErrorCode = :code where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
 }

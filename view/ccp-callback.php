@@ -24,10 +24,12 @@ $userInfo = $sso->handleCallback($code, $state, $_SESSION);
 $charID = $userInfo['characterID'];
 $refreshToken = $userInfo['refreshToken'];
 $scopes = explode(' ', $userInfo['scopes']);
+Db::execute("delete from skq_scopes where characterID = :charID", [':charID' => $charID]);
 foreach ($scopes as $scope) {
-	Db::execute("insert ignore into skq_scopes values(:charID, :scope, :refreshToken, 0, 0, 0)", [':charID' => $charID, ':scope' => $scope, ':refreshToken' => $refreshToken]);
+	Db::execute("insert ignore into skq_scopes values(:charID, :scope, :refreshToken, now(), 0, 0)", [':charID' => $charID, ':scope' => $scope, ':refreshToken' => $refreshToken]);
 }
-Db::execute("insert ignore into skq_scopes values(:charID, 'publicData', '', 0, 0, 0)", [':charID' => $charID]);
+Db::execute("insert ignore into skq_scopes values(:charID, 'publicData', '', now(), 0, 0)", [':charID' => $charID]);
+Db::execute("update skq_scopes set lastChecked = 0 where characterID = :charID", [':charID' => $charID]);
 
 if (!isset($_SESSION['character_id']) || $_SESSION['character_id'] == "")  $_SESSION['character_id'] = $charID;
 if ($_SESSION['character_id'] > "" && $charID != $_SESSION['character_id']) {

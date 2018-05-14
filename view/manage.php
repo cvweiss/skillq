@@ -19,8 +19,10 @@ if ($_POST) {
 	$removeID = (int) @$_POST['remove'];
 	if ($removeID > 0) {
 		if (in_array($removeID, $c)) {
-			Db::execute("delete from skq_character_info where characterID = :charID", [':charID' => $removeID]);
-			Db::execute("delete from skq_scopes where characterID = :charID", [':charID' => $removeID]);
+			$tables = ['skq_character_assets', 'skq_character_certs', 'skq_character_implants', 'skq_character_info', 'skq_character_queue', 'skq_character_shares', 'skq_character_skills', 'skq_character_training', 'skq_character_wallet', 'skq_scopes', 'skq_users', 'skq_users_config'];
+			foreach ($tables as $table) {
+				Db::execute("delete from $table where characterID = :charID", [':charID' => $removeID]);
+			}
 			Db::execute("delete from skq_character_associations where char1 = :charID or char2 = :charID", [':charID' => $removeID]);;
 		}
 		return;
