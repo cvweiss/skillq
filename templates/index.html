@@ -29,7 +29,7 @@
 								<td class="pull-left">
 									<strong><a href="/char/{{ char.characterName|url_encode }}">{{ char.characterName }}{% if char.missingScopes %}<span style='color: red;'> !<span>{% endif %}</a></strong><br/>
 									{{ char.balance|number_format(2) }} ISK<br/>
-									{{ char.skillPoints|number_format(0) }} SP<br/>
+									{{ char.skillPoints|number_format(0) }} SP<br/><small>
 									{% if char.typeName %}
 										<span id="cache{{char.characterID}}"></span>
 										{% if char.queueFinishesSeconds < 86400 and char.queueFinishesSeconds > 0 %}
@@ -47,7 +47,7 @@
 											});
 										</script>
 									{% endif %}
-								</td>
+								</small></td>
 							</tr>
 						</table>
 					</div></div>
