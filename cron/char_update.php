@@ -21,37 +21,24 @@ while ($minutely == date('Hi')) {
 	}
 
 	$charID = $row['characterID'];
+	$scope = $row['scope'];
 	$refreshToken = $row['refresh_token'];
-	$headers = ['Authorization' =>'Basic ' . base64_encode($clientID . ':' . $secretKey), "Content-Type" => "application/json"];
-	$url = 'https://login.eveonline.com/oauth/token';
+	$accessToken = @$row['accessToken'];
+
+	$headers = ['Authorization' =>"Bearer $accessToken", "Content-Type" => "application/json"];
 	$params = ['row' => $row];
 
-	$scope = $row['scope'];
-	$accessToken = @$row['accessToken'];
-
-	$row = $params['row'];
-	$charID = $row['characterID'];
-	$refreshToken = $row['refresh_token'];
-	$scope = $row['scope'];
-	$fields = [];
-
-	$accessToken = @$row['accessToken'];
-	$headers = ['Content-Type: application/json'];
-
-	$fields = "?token=" . rawurlencode($accessToken);
-
-	$url = "";
 	switch ($scope) {
 		case 'esi-skills.read_skills.v1':
-			$url = "https://esi.tech.ccp.is/v4/characters/$charID/skills/$fields";
+			$url = "https://esi.tech.ccp.is/v4/characters/$charID/skills/";
 			$guzzler->call($url, "loadSkills", "fail", $params, $headers);
 			break;
 		case 'esi-skills.read_skillqueue.v1':
-			$url = "https://esi.tech.ccp.is/v2/characters/$charID/skillqueue/$fields";
+			$url = "https://esi.tech.ccp.is/v2/characters/$charID/skillqueue/";
 			$guzzler->call($url, "loadQueue", "fail", $params, $headers);
 			break;
 		case 'esi-wallet.read_character_wallet':
-			$url = "https://esi.tech.ccp.is/v1/characters/$charID/wallet/$fields";
+			$url = "https://esi.tech.ccp.is/v1/characters/$charID/wallet/";
 			$guzzler->call($url, "loadWallet", "fail", $params, $headers);
 			break;
 		case 'publicData':
@@ -152,6 +139,7 @@ function clearError($row)
 function fail($guzzler, $params, $ex)
 {
 	$code = $ex->getCode();
+echo $code .  $ex->getMessage() . "\n";
 	$row = $params['row'];
 
 	Db::execute("update skq_scopes set errorCount = errorCount + 1, lastErrorCode = :code where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
