@@ -101,16 +101,16 @@
         },
         {
             "name": "cvweiss/zcache",
-            "version": "v0.1.4",
+            "version": "v0.1.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/cvweiss/zcache.git",
-                "reference": "1ca8a0007ad335d18357e15d8b7e10695ad165fc"
+                "reference": "f59dc70bd70e8eb4388d8ab6d3e1450a6bfbfacb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/cvweiss/zcache/zipball/1ca8a0007ad335d18357e15d8b7e10695ad165fc",
-                "reference": "1ca8a0007ad335d18357e15d8b7e10695ad165fc",
+                "url": "https://api.github.com/repos/cvweiss/zcache/zipball/f59dc70bd70e8eb4388d8ab6d3e1450a6bfbfacb",
+                "reference": "f59dc70bd70e8eb4388d8ab6d3e1450a6bfbfacb",
                 "shasum": ""
             },
             "type": "library",
@@ -130,7 +130,7 @@
                 }
             ],
             "description": "Library of classes to simplify caching",
-            "time": "2018-03-03T16:38:02+00:00"
+            "time": "2018-05-15T22:01:27+00:00"
         },
         {
             "name": "cvweiss/zlibrary",
