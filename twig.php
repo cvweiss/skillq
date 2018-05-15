@@ -29,6 +29,8 @@ $twig->addFunction("queryCount", new Twig_Function_Function("Db::getQueryCount")
 $twig->addFunction("isActive", new Twig_Function_Function("Util::isActive"));
 
 $twig->addGlobal("sessionusername", @$_SESSION['character_id']);
+$twig->addGlobal("theme", UserConfig::get("theme", "default"));
+$twig->addGlobal("themes", ['amelia', 'cerulean', 'cyborg', 'default', 'journal', 'readable', 'simplex', 'slate', 'spacelab', 'spruce', 'superhero', 'united']);
 
 $chars = [];
 $userID = null;
