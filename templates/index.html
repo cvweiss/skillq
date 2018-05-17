@@ -8,7 +8,7 @@
 		{% if showEmailReminder %}
 			<div class="alert">No email on file to notify you, please <a href='/account/'>click here</a> to update.</div>
 		{% endif %}
-		<div class="row{{ fluid }}">
+		<div class="row-fluid">
 			<div class="characters span12">
 				{% for char in chars %}
 					{% set netWealth = netWealth + char.balance %}
@@ -52,7 +52,7 @@
 		</div>
 
 		{% if chars|length > 1 %}
-			<div class="row{{ fluid }}"><div class="well span3">
+			<div class="row-fluid"><div class="well span3">
 				Net ISK: {{ netWealth|number_format(2) }}<br/>
 				Net SP: {{ netSP|number_format(0) }}
 			</div></div>
