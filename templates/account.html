@@ -9,7 +9,7 @@
 	<h3>Account Settings</h3>
 	<table class="table">
 		<tr><th>Email:</th><td><input style="width: 100%;" type="text" name="email" type="email" value="{{ config.email }}"><br/><small>By providing an email you are authorizing SkillQ to email you notifications when a character on your account has a skill queue of less than 24 hours.</td></tr>
-		<tr><td>&nbsp;</td><td><input type='checkbox' name='nagger' value="{{ config.nagger }}" {% if config.nagger == 'nonag' %}checked{% endif %}/> Don't display "no email" warning on front page.</td></tr>
+		<tr><td>&nbsp;</td><td><input type='checkbox' name='nagger' value="nonag" {% if config.nagger == 'nonag' %}checked{% endif %}/> Don't display "no email" warning on front page.</td></tr>
 		<tr><th>Slack:</th><td><i>Coming Soon...</i></td></tr>
 		<tr><th>Discord:</th><td><i>Coming Soon...</i></td></tr>
 		<tr><th>Theme:</th><td><select name="theme">
