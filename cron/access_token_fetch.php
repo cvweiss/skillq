@@ -12,6 +12,7 @@ global $clientID, $secretKey, $callbackURL, $scopes;
 $accessTokens = [];
 $errorTokens = [];
 
+$count = 0;
 $i = [];
 Db::execute("update skq_scopes set lastChecked = 0 where errorCount > 0 and lastErrorCode in (403, 502)");
 $minutely = date('Hi');
@@ -25,19 +26,23 @@ while ($minutely == date('Hi')) {
 
 		if (in_array($charID, $i)) { echo "breaking on $charID\n"; sleep(1); continue; }
 		$i[] = $charID;
+		if ($redis->get("skq:sso:$charID") == "true") continue;
+		$redis->setex("skq:sso:$charID", 120, "true");
 
 		$headers = ['Authorization' =>'Basic ' . base64_encode($clientID . ':' . $secretKey), "Content-Type" => "application/json"];
 		$url = 'https://login.eveonline.com/oauth/token';
 		$params = ['row' => $row];
 
 		$guzzler->call($url, "accessTokenSuccess", "fail", $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
-		Util::out("  SSO: " . substr("$charID", strlen("$charID") - 6, 6));
+		//Util::out("  SSO: " . substr("$charID", strlen("$charID") - 6, 6));
+		$count++;
 	} else sleep(1);
 	$guzzler->tick();
 	while ($redis->llen("skq:esiQueue") > 100) usleep(100000);
 }
 $guzzler->finish();
-while ($redis->llen("skq:esiQueue") > 0) usleep(100000);
+Util::out("SSO Processed $count => " . number_format($count / 60, 1) . "rps");
+
 
 function accessTokenSuccess(&$guzzler, &$params, &$content)
 {
@@ -73,6 +78,7 @@ function fail($guzzler, $params, $ex)
 				// Delete twice as quick
 				Db::execute("update skq_scopes set errorCount = errorCount + 1, lastErrorCode = :code where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
 			}
+			break;
 		default:
 			Util::out($code . " " . $ex->getMessage(). "\n" . print_r($row, true));
 	}
