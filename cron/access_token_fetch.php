@@ -5,6 +5,10 @@ require_once "../init.php";
 use zkillboard\crestsso\CrestSSO;
 use cvweiss\Guzzler;
 
+// Skip downtime
+$now = date('Hi');
+if ($now >= 1058 && $now <= 1130) exit();
+
 $guzzler = new Guzzler(3);
 
 global $clientID, $secretKey, $callbackURL, $scopes;
