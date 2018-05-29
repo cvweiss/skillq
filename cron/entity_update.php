@@ -4,6 +4,10 @@ require_once "../init.php";
 
 use zkillboard\crestsso\CrestSSO;
 
+// Skip downtime
+$now = date('Hi');
+if ($now >= 1058 && $now <= 1130) exit();
+
 global $clientID, $secretKey, $callbackURL, $scopes;
 $sso = new CrestSSO($clientID, $secretKey, $callbackURL, $scopes);
 
