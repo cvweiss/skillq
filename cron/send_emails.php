@@ -12,8 +12,7 @@ foreach ($emails as $email) {
 	$body    = $email["content"];
 
 	$mail = new PHPMailer();
-
-
+	$mail->Debugoutput = 'error_log';
 	$mail->isSMTP();
 	$mail->Host = 'smtp.googlemail.com';
 	$mail->SMTPAuth = true;
@@ -28,4 +27,5 @@ foreach ($emails as $email) {
 	$mail->MsgHTML($body);
 
 	Db::execute("update skq_emails set isSent = :isSent, sentTime = now() where emailID = :emailID", [":emailID" => $emailID, ':isSent' => ($mail->Send() ? 1 : -1)]);
+	Util::out("Email sent to $to");
 }
