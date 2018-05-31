@@ -21,7 +21,6 @@ foreach ($tables as $table) {
 		foreach ($result as $row) {
 			$charID = $row['characterID'];
 			Util::out("Removing $charID from $table");
-echo "delete from $table where characterID = :charID $charID\n";
 			Db::execute("delete from $table where characterID = :charID", [':charID' => $charID]);
 		}
 	}
