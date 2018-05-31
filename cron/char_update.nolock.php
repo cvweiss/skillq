@@ -13,10 +13,9 @@ $errorTokens = [];
 
 $count = 0;
 $minutely = date('Hi');
-while ($redis->get("skq:tqStatus") == "ONLINE") {
+while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$row = unserialize($redis->lpop("skq:esiQueue"));
 	if ($row == null) {
-		if ($minutely != date('Hi')) break;
 		sleep(1);
 		continue;
 	}
@@ -72,7 +71,7 @@ function loadSkills(&$guzzler, &$params, &$content)
 		Db::execute("update skq_character_info set unallocated_sp = :usp where characterID = :charID", [':charID' => $charID, ':usp' => $skills['unallocated_sp']]);
 	}
 	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
-	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skills.v1");
+	//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skills.v1");
 }
 
 function loadQueue(&$guzzler, &$params, &$content) 
@@ -109,7 +108,7 @@ function loadQueue(&$guzzler, &$params, &$content)
 	$maxQueueTime = Db::queryField("select max(endTime) endTime from skq_character_queue where characterID = :charID", "endTime", [':charID' => $charID]);
 	Db::execute("update skq_character_info set queueFinishes = :endTime where characterID = :charID", [":charID" => $charID, ":endTime" => $maxQueueTime]);
 	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
-	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skillqueue.v1");
+	//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skillqueue.v1");
 }
 
 function loadWallet(&$guzzler, &$params, &$content)
@@ -119,7 +118,7 @@ function loadWallet(&$guzzler, &$params, &$content)
 	$charID = $params['row']['characterID'];
 	Db::execute("update skq_character_info set balance = :balance where characterID = :charID", [':charID' => $charID, ':balance' => $wallet]);
 	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
-	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-wallet.read_character_wallet");
+	//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-wallet.read_character_wallet");
 }
 
 function loadPublicData(&$guzzler, &$params, &$content)
@@ -133,7 +132,7 @@ function loadPublicData(&$guzzler, &$params, &$content)
 		Db::execute("insert ignore into skq_alliances values (:alliID, :alliName, 0)", [':alliID' => (int) @$result['alliance_id'], ':alliName' => "Pending API Fetch"]);
 	}
 	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
-	Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " publicData");
+	//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " publicData");
 }
 
 function clearError($row)
@@ -157,7 +156,6 @@ function fail($guzzler, $params, $ex)
 
 	$row['attempts'] = 1 + @$row['attempts'];
 
-	Util::out("char update: $code " . $row['characterID'] . " " . $row['scope'] . "\n" . @$params['content']);
 	switch ($code) {
 		case 420:
 		case 0:
