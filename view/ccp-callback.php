@@ -26,9 +26,12 @@ $refreshToken = $userInfo['refreshToken'];
 $scopes = explode(' ', $userInfo['scopes']);
 Db::execute("delete from skq_scopes where characterID = :charID", [':charID' => $charID]);
 foreach ($scopes as $scope) {
-	Db::execute("insert ignore into skq_scopes values(:charID, :scope, :refreshToken, now(), 0, 0)", [':charID' => $charID, ':scope' => $scope, ':refreshToken' => $refreshToken]);
+	Db::execute("insert ignore into skq_scopes (characterID, scope, refresh_token) values(:charID, :scope, :refreshToken)", [':charID' => $charID, ':scope' => $scope, ':refreshToken' => $refreshToken]);
 }
-Db::execute("insert ignore into skq_scopes values(:charID, 'publicData', '', now(), 0, 0)", [':charID' => $charID]);
+// make sure any other records have the same refresh token
+Db::execute("update skq_scopes set refresh_token = :refreshToken, lastSsoChecked = 0 where characterID = :charID", [':charID' => $charID, ':refreshToken' => $refreshToken]);
+
+Db::execute("insert ignore into skq_scopes (characterID, scope, refresh_token) values(:charID, 'publicData', '')", [':charID' => $charID]);
 Db::execute("update skq_scopes set lastChecked = 0 where characterID = :charID", [':charID' => $charID]);
 
 if (!isset($_SESSION['character_id']) || $_SESSION['character_id'] == "")  $_SESSION['character_id'] = $charID;
