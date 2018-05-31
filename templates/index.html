@@ -30,6 +30,7 @@
 										<span id="cache{{char.characterID}}"></span>
 										{% if char.queueFinishesSeconds < 86400 and char.queueFinishesSeconds > 0 %}
 											{% set qf = true %}
+											{% set field = char %} {% include 'components/text_item.html' %}<br/>
 											<p class="text-error">Empty Queue: <span id="queueTime{{ char.characterID }}"></span></p>
 										{% else %}
 											<span>{{ char.queueFinishes }}</span><br/>
