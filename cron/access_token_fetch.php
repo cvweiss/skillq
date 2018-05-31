@@ -5,11 +5,7 @@ require_once "../init.php";
 use zkillboard\crestsso\CrestSSO;
 use cvweiss\Guzzler;
 
-// Skip downtime
-$now = date('Hi');
-if ($now >= 1058 && $now <= 1130) exit();
-
-$guzzler = new Guzzler(3);
+$guzzler = new Guzzler(5);
 
 global $clientID, $secretKey, $callbackURL, $scopes;
 
@@ -18,20 +14,20 @@ $errorTokens = [];
 
 $count = 0;
 $i = [];
-Db::execute("update skq_scopes set lastChecked = 0 where errorCount > 0 and lastErrorCode in (403, 502)");
+Db::execute("update skq_scopes set lastSsoChecked = 0 where errorCount > 0 and lastErrorCode in (403, 502)");
 $minutely = date('Hi');
-while ($minutely == date('Hi')) {
+while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$exclude = implode(",", $i);
 	$notIn = sizeof($i) > 0 ? " and characterID not in (" . implode(",", $i) . ") " : "";
-	$row = Db::queryRow("select characterID, scope, refresh_token from skq_scopes where lastChecked < date_sub(now(), interval 60 minute) and errorCount < 10 and refresh_token != '' $notIn order by lastChecked limit 1", [], 0);
-	if (sizeof($row) != 0) {
+	$rows = Db::query("select characterID, scope, refresh_token from skq_scopes where lastSsoChecked < date_sub(now(), interval 60 minute) and errorCount < 10 and refresh_token != '' $notIn order by lastSsoChecked limit 100", [], 0);
+	foreach ($rows as $row) {
+		while ($redis->llen("skq:esiQueue") > 100) usleep(100000);
 		$charID = $row['characterID'];
 		$refreshToken = $row['refresh_token'];
 
-		if (in_array($charID, $i)) { echo "breaking on $charID\n"; sleep(1); continue; }
+		if (in_array($charID, $i)) continue;
 		$i[] = $charID;
-		if ($redis->get("skq:sso:$charID") == "true") continue;
-		$redis->setex("skq:sso:$charID", 120, "true");
+		Db::execute("update skq_scopes set lastSsoChecked = now() where characterID = :charID", [':charID' => $charID]);
 
 		$headers = ['Authorization' =>'Basic ' . base64_encode($clientID . ':' . $secretKey), "Content-Type" => "application/json"];
 		$url = 'https://login.eveonline.com/oauth/token';
@@ -40,12 +36,12 @@ while ($minutely == date('Hi')) {
 		$guzzler->call($url, "accessTokenSuccess", "fail", $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
 		//Util::out("  SSO: " . substr("$charID", strlen("$charID") - 6, 6));
 		$count++;
-	} else sleep(1);
+	} 
 	$guzzler->tick();
-	while ($redis->llen("skq:esiQueue") > 100) usleep(100000);
+	if (sizeof($rows) == 0) sleep(1);
 }
 $guzzler->finish();
-Util::out("SSO Processed $count => " . number_format($count / 60, 1) . "rps");
+if ($count > 0) Util::out("SSO Processed $count => " . number_format($count / 60, 1) . "rps");
 
 
 function accessTokenSuccess(&$guzzler, &$params, &$content)
@@ -75,7 +71,8 @@ function fail($guzzler, $params, $ex)
 	switch ($code) {
 		case 0:
 		case 502:
-			Db::execute("update skq_scopes set lastChecked = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
+		case 504:
+			Db::execute("update skq_scopes set lastSsoChecked = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
 			break;
 		case 400:
 			if (strpos($ex->getMessage(), "invalid_token") !== false) {
@@ -84,7 +81,7 @@ function fail($guzzler, $params, $ex)
 			}
 			break;
 		default:
-			Util::out($code . " " . $ex->getMessage(). "\n" . print_r($row, true));
+			Util::out("refresh token: " .$code . " " . $ex->getMessage(). "\n" . print_r($row, true));
 	}
 
 	Db::execute("update skq_scopes set errorCount = errorCount + 1, lastErrorCode = :code where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
