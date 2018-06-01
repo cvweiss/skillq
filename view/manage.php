@@ -5,7 +5,7 @@ if (!User::isLoggedIn()) {
 }
 $charID = User::getUserID();
 
-global $chars;
+global $chars, $redis;
 $c = [];
 foreach ($chars as $ch) {
         $c[] = $ch['characterID'];
@@ -25,6 +25,9 @@ if ($_POST) {
 			}
 			Db::execute("delete from skq_character_associations where char1 = :charID or char2 = :charID", [':charID' => $removeID]);;
 		}
+		// Clear existing etags
+		$keys = $redis->keys("guzzler:etags:*$removeID*");
+		foreach ($keys as $key) $redis->del($key);
 		return;
 	}
 	$orderBy = (string) @$_POST['orderBy'];

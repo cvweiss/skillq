@@ -16,7 +16,8 @@ $minutely = date('Hi');
 while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$row = unserialize($redis->lpop("skq:esiQueue"));
 	if ($row == null) {
-		sleep(1);
+		$guzzler->tick();
+		usleep(100000);
 		continue;
 	}
 
@@ -25,7 +26,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$refreshToken = $row['refresh_token'];
 	$accessToken = @$row['accessToken'];
 
-	$headers = ['Authorization' =>"Bearer $accessToken", "Content-Type" => "application/json"];
+	$headers = ['Authorization' =>"Bearer $accessToken", "Content-Type" => "application/json", 'etag' => $redis];
 	$params = ['row' => $row];
 
 	$count++;
@@ -55,89 +56,90 @@ if ($count > 0) Util::out("Fetch Processed $count => " . number_format($count / 
 
 function loadSkills(&$guzzler, &$params, &$content)
 {
-	clearError($params['row']);
-	$skills = json_decode($content, true);
-	$charID = $params['row']['characterID'];
-	if (isset($skills['skills'])) {
-		foreach ($skills['skills'] as $skill) {
-			Db::execute("insert ignore into skq_character_skills (characterID, typeID) values (:charID, :typeID)", [':charID' => $charID, ':typeID' => $skill['skill_id']]);
-			Db::execute("update skq_character_skills set level = :level, skillPoints = :points where characterID = :charID and typeID = :typeID", [':charID' => $charID, ':typeID' => $skill['skill_id'], ':level' => $skill['trained_skill_level'], ':points' => $skill['skillpoints_in_skill']]);
+	if ($content != "") {
+		$skills = json_decode($content, true);
+		$charID = $params['row']['characterID'];
+		if (isset($skills['skills'])) {
+			foreach ($skills['skills'] as $skill) {
+				Db::execute("insert ignore into skq_character_skills (characterID, typeID) values (:charID, :typeID)", [':charID' => $charID, ':typeID' => $skill['skill_id']]);
+				Db::execute("update skq_character_skills set level = :level, skillPoints = :points where characterID = :charID and typeID = :typeID", [':charID' => $charID, ':typeID' => $skill['skill_id'], ':level' => $skill['trained_skill_level'], ':points' => $skill['skillpoints_in_skill']]);
+			}
+			Db::execute("update skq_character_info set skillsTrained = :count, skillPoints = :sp where characterID = :charID", [':charID' => $charID, ':count' => count($skills['skills']), ':sp'=> $skills['total_sp']]);
 		}
-		Db::execute("update skq_character_info set skillsTrained = :count, skillPoints = :sp where characterID = :charID", [':charID' => $charID, ':count' => count($skills['skills']), ':sp'=> $skills['total_sp']]);
-		//Db::execute("insert ignore into skq_character_tracking (characterID, skill_points, last_update) values (:charID, :sp, now())", [':charID' => $charID, ':sp' => $skills['total_sp']]);
-		//Db::execute("update skq_character_tracking set skill_points = :sp, last_update = now() where character_id = :charID and skill_points != :sp", [':charID' => $charID, ':sp' => $skills['total_sp']]);
+		if (isset($skills['unallocated_sp'])) {
+			Db::execute("update skq_character_info set unallocated_sp = :usp where characterID = :charID", [':charID' => $charID, ':usp' => $skills['unallocated_sp']]);
+		}
+		//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skills.v1");
 	}
-	if (isset($skills['unallocated_sp'])) {
-		Db::execute("update skq_character_info set unallocated_sp = :usp where characterID = :charID", [':charID' => $charID, ':usp' => $skills['unallocated_sp']]);
-	}
-	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
-	//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skills.v1");
+	clearError($params['row']);
 }
 
 function loadQueue(&$guzzler, &$params, &$content) 
 {
-	clearError($params['row']);
-	$queue = json_decode($content, true);
-	$charID = $params['row']['characterID'];
-	if (sizeof($queue) > 0) {
-		$firstV = array_shift(array_slice($queue, 0, 1)); 
-		if (isset($firstV['level_start_sp'])) {
-			Db::execute("delete from skq_character_queue where characterID = :charID", [":charID" => $charID]);
-			Db::execute("update skq_character_skills set queue = 0 where characterID = :charID", [":charID" => $charID]);
-			Db::execute("delete from skq_character_training where characterID = :charID", [':charID' => $charID]);
-			foreach ($queue as $qs) {
-				Db::execute("insert ignore into skq_character_queue (characterID, queuePosition, typeID, level, startSP, endSP, startTime, endTime) values
-						(:charID, :qp, :typeID, :level, :startSP, :endSP, :startTime, :endTime)",
-						array(
-							":charID"    => $charID,
-							":qp"        => $qs['queue_position'],
-							":typeID"    => $qs['skill_id'],
-							":level"     => $qs['finished_level'],
-							":startSP"   => $qs['training_start_sp'],
-							":endSP"     => $qs['level_end_sp'],
-							":startTime" => @$qs['start_date'],
-							":endTime"   => @$qs['finish_date']
-						     )
-					   );
-				Db::execute("update skq_character_skills set queue = :level where characterID = :charID and typeID = :typeID and :endTime > now() and queue = 0",
-						[":charID" => $charID, ":typeID" => $qs['skill_id'], ":level" => $qs['finished_level'], ':endTime' => @$qs['finish_date']]);
+	if ($content != "") {
+		$charID = $params['row']['characterID'];
+		$queue = json_decode($content, true);
+		if (sizeof($queue) > 0) {
+			$firstV = array_shift(array_slice($queue, 0, 1)); 
+			if (isset($firstV['level_start_sp'])) {
+				Db::execute("delete from skq_character_queue where characterID = :charID", [":charID" => $charID]);
+				Db::execute("update skq_character_skills set queue = 0 where characterID = :charID", [":charID" => $charID]);
+				Db::execute("delete from skq_character_training where characterID = :charID", [':charID' => $charID]);
+				foreach ($queue as $qs) {
+					Db::execute("insert ignore into skq_character_queue (characterID, queuePosition, typeID, level, startSP, endSP, startTime, endTime) values
+							(:charID, :qp, :typeID, :level, :startSP, :endSP, :startTime, :endTime)",
+							array(
+								":charID"    => $charID,
+								":qp"        => $qs['queue_position'],
+								":typeID"    => $qs['skill_id'],
+								":level"     => $qs['finished_level'],
+								":startSP"   => $qs['training_start_sp'],
+								":endSP"     => $qs['level_end_sp'],
+								":startTime" => @$qs['start_date'],
+								":endTime"   => @$qs['finish_date']
+							     )
+						   );
+					Db::execute("update skq_character_skills set queue = :level where characterID = :charID and typeID = :typeID and :endTime > now() and queue = 0",
+							[":charID" => $charID, ":typeID" => $qs['skill_id'], ":level" => $qs['finished_level'], ':endTime' => @$qs['finish_date']]);
+				}
 			}
-		}
-	} 
-	Db::execute("replace into skq_character_training select characterID, startTime, endTime, typeID, startSP, endSP, level from skq_character_queue where characterID = :charID and endTime > now() order by endTime  limit 1", [':charID' => $charID]);
-	$maxQueueTime = Db::queryField("select max(endTime) endTime from skq_character_queue where characterID = :charID", "endTime", [':charID' => $charID]);
-	Db::execute("update skq_character_info set queueFinishes = :endTime where characterID = :charID", [":charID" => $charID, ":endTime" => $maxQueueTime]);
-	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
+		} 
+		$maxQueueTime = Db::queryField("select max(endTime) endTime from skq_character_queue where characterID = :charID", "endTime", [':charID' => $charID]);
+		Db::execute("update skq_character_info set queueFinishes = :endTime where characterID = :charID", [":charID" => $charID, ":endTime" => $maxQueueTime]);
+	}
 	//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skillqueue.v1");
+	clearError($params['row']);
 }
 
 function loadWallet(&$guzzler, &$params, &$content)
 {
+	if ($content != "") {
+		$wallet = json_decode($content, true);
+		$charID = $params['row']['characterID'];
+		Db::execute("update skq_character_info set balance = :balance where characterID = :charID", [':charID' => $charID, ':balance' => $wallet]);
+		//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-wallet.read_character_wallet");
+	}
 	clearError($params['row']);
-	$wallet = json_decode($content, true);
-	$charID = $params['row']['characterID'];
-	Db::execute("update skq_character_info set balance = :balance where characterID = :charID", [':charID' => $charID, ':balance' => $wallet]);
-	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
-	//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-wallet.read_character_wallet");
 }
 
 function loadPublicData(&$guzzler, &$params, &$content)
 {
-	clearError($params['row']);
-	$result = json_decode($content, true);
-	$charID = $params['row']['characterID'];
-	if (isset($result['name'])) {
-		Db::execute("update skq_character_info set lastChecked = now(), characterName = :name, corporationID = :corp, allianceID = :alli where characterID = :charID", [":charID" => $charID, ":name" => $result['name'], ":corp" => (int) @$result['corporation_id'], ':alli' => (int) @$result['alliance_id']]);
-		Db::execute("insert ignore into skq_corporations values (:corpID, :corpName, 0)", [':corpID' => (int) @$result['corporation_id'], ":corpName" => "Pending API Fetch"]);
-		Db::execute("insert ignore into skq_alliances values (:alliID, :alliName, 0)", [':alliID' => (int) @$result['alliance_id'], ':alliName' => "Pending API Fetch"]);
+	if ($content != "") {
+		$result = json_decode($content, true);
+		$charID = $params['row']['characterID'];
+		if (isset($result['name'])) {
+			Db::execute("update skq_character_info set lastChecked = now(), characterName = :name, corporationID = :corp, allianceID = :alli where characterID = :charID", [":charID" => $charID, ":name" => $result['name'], ":corp" => (int) @$result['corporation_id'], ':alli' => (int) @$result['alliance_id']]);
+			Db::execute("insert ignore into skq_corporations values (:corpID, :corpName, 0)", [':corpID' => (int) @$result['corporation_id'], ":corpName" => "Pending API Fetch"]);
+			Db::execute("insert ignore into skq_alliances values (:alliID, :alliName, 0)", [':alliID' => (int) @$result['alliance_id'], ':alliName' => "Pending API Fetch"]);
+		}
+		//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " publicData");
 	}
-	Db::execute("update skq_scopes set lastChecked = now() where characterID = :charID and scope = :scope", [':charID' => $charID, ':scope' => $params['row']['scope']]);
-	//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " publicData");
+	clearError($params['row']);
 }
 
 function clearError($row)
 {
-	Db::execute("update skq_scopes set errorCount = 0, lastErrorCode = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
+	Db::execute("update skq_scopes set errorCount = 0, lastErrorCode = 0, lastChecked = now(), lastSsoChecked = now() where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope']]);
 }
 
 function fail($guzzler, $params, $ex)
