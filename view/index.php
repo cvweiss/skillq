@@ -12,7 +12,7 @@ if (@$_SESSION['character_id'] > 0) {
 	Info::addInfo($chars);
 	$c = array();
 	foreach ($chars as $char) {
-		@$seconds = $char["cachedUntilSeconds"];
+		$seconds = (int) @$char["queueFinishesSeconds"];
 		if ($seconds > 0) $pageRefresh = min($pageRefresh, $seconds);
 	}
 	require_once("view/components/config.php");
