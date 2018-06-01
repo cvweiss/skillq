@@ -2,14 +2,12 @@
 
 require_once '../init.php';
 
-use cvweiss\Guzzler;
-
 $minute = date('Hi');
 if ($minute >= 1100 && $minute <= 1105) {
     $redis->setex('skq:tqStatus', 300, 'OFFLINE'); // Just in case the result is cached on their end as online
     $redis->setex('skq:tqCount', 300, 0);
 } else {
-    $guzzler = new Guzzler();
+    $guzzler = Util::getGuzzler();
     $guzzler->call("https://esi.evetech.net/v1/status/", "success", "fail");
     $guzzler->finish();
 }

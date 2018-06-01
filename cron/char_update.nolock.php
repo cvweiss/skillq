@@ -1,11 +1,12 @@
 <?php
 
+for ($a = 0; $a < 5; $a++) pcntl_fork();
+
 require_once "../init.php";
 
 use zkillboard\crestsso\CrestSSO;
-use cvweiss\Guzzler;
 
-$guzzler = new Guzzler(50, 1);
+$guzzler = Util::getGuzzler(10, 1);
 
 global $clientID, $secretKey, $callbackURL, $scopes;
 
@@ -52,7 +53,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	}
 }
 $guzzler->finish();
-if ($count > 0) Util::out("Fetch Processed $count => " . number_format($count / 60, 1) . "rps");
+//if ($count > 0) Util::out("Fetch Processed $count => " . number_format($count / 60, 1) . "rps");
 
 function loadSkills(&$guzzler, &$params, &$content)
 {
@@ -172,7 +173,7 @@ function fail($guzzler, $params, $ex)
 			if ($code == 420) {
 				Util::out("420'ed");
 				$guzzler->finish();
-				exit();
+				exit("420'ed");
 			}
 			break;
 		default:

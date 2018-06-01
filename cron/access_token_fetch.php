@@ -3,9 +3,8 @@
 require_once "../init.php";
 
 use zkillboard\crestsso\CrestSSO;
-use cvweiss\Guzzler;
 
-$guzzler = new Guzzler(5);
+$guzzler = Util::getGuzzler(10);
 
 global $clientID, $secretKey, $callbackURL, $scopes;
 
