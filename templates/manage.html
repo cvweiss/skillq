@@ -18,7 +18,7 @@
 	{% for char in scopes %}
 	<tr>
 		<td><input type='textbox' name="custom-{{ char.characterID }}" value="{{ char.customOrder }}" style="width: 3em;"></td>
-		<td><a href='/char/{{ char.characterName}}'>{{ char.characterName }}{% if char.missingScopes %}<span style='color: red;'> !<span>{% endif %}</a></td>
+		<td><a href='/char/{{ char.characterName}}'>{{ char.characterName }}{% if char.missingScopes %}<span class="alert alert-error">!<span>{% endif %}</a></td>
 		<td>{{ char.lastChecked }}</td>
 		<td><span class='pull-right'><a href='#' onClick="verifyRemoval('{{ char.characterName }}', {{ char.characterID }}); return false;">X</a></span></td>
 	</tr>

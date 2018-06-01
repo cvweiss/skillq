@@ -40,7 +40,7 @@
 <div class="row">
         <div class="span6">
                 <div class="pull-left">
-                        <h4>Skills <em style="font-size: 75%">Total: {{ totalSP|number_format(0) }} SP / {{ skills|length|number_format(0) }} Skills{% if char.unallocated_sp != 0 %}<span style='color: #800000'> ({{ char.unallocated_sp|number_format(0) }} Unallocated SP){% endif %}</em></h4>
+                        <h4>Skills <em style="font-size: 75%">Total: {{ totalSP|number_format(0) }} SP / {{ skills|length|number_format(0) }} Skills{% if char.unallocated_sp != 0 %}&nbsp;&nbsp;<span class="alert" style="border: 0; padding:0;"> ({{ char.unallocated_sp|number_format(0) }} Unallocated SP){% endif %}</em></h4>
                 </div>
                 <div class="pull-right span1" style="position: relative; bottom: -1.75em;">
         <ul class="nav pull-right hidden-phone">
