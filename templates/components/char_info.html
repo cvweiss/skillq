@@ -14,7 +14,7 @@
                         {{ char.corporationName }}<br/>
                         {% if char.allianceID %}{{ char.allianceName }}<br/>{% endif %}
                         {% if not isShare %}{{ char.balance|number_format(2) }} ISK<br/>{% endif %}
-                        {% if training.typeName and char.subStatus != 'Subscription Expired' %}
+                        {% if training.typeName %}a
                                 {% set field = training %} {% include 'components/text_item.html' %}<br/>
                                 {% if queueFinishes < 86400 %}
                                 <p class="text-error">Empty Queue: <span id="queueTime"></span></p>
@@ -24,15 +24,11 @@
                                 <script type="text/javascript">
                                         $(function () {
                                                 $('#countdown').countdown({until: '{{ training.trainingSeconds }}', compact: true });
+						setTimeout('stc();', {{ training.trainingSeconds }}000);
                                                 {% if queueFinishes < 86400 %}$('#queueTime').countdown({until: '{{ queueFinishes}}', compact: true});{% endif %}
                                         });
                                 </script>
-                        {% elseif char.subFlag == "0" %}
-                                <p class="text-error"><em><strong>No skill training...</strong></em></p>
                         {% endif %}
-						{% if char.subStatus != "" %}
-                                <p class="text-error"><em><strong>{{ char.subStatus }}</strong></em></p>
-						{% endif %}
                 </td>
                 </tr>   
                 <tr><td>{% if char.allianceID %}<img src="{{ image_alliance }}/{{ char.allianceID }}_32.png" title="{{ char.allianceName }}" class="hidden-phone eve-image"/>{% endif %}</td></tr>
