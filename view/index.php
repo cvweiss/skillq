@@ -12,7 +12,8 @@ if (@$_SESSION['character_id'] > 0) {
 	Info::addInfo($chars);
 	$c = array();
 	foreach ($chars as $char) {
-		$seconds = (int) @$char["queueFinishesSeconds"];
+		$endTime = Db::queryField("select trainingEndTime from skq_character_training where characterID = :charID", "trainingEndTime", [':charID' => $char['characterID']]);
+		$seconds = strtotime($endTime) - time();
 		if ($seconds > 0) $pageRefresh = min($pageRefresh, $seconds);
 	}
 	require_once("view/components/config.php");

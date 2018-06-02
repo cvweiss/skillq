@@ -13,3 +13,10 @@ function verifyRemoval(charName, charID)
 		});
 	}
 }
+
+function stc()
+{
+	var stc = new Audio('/audio/SkillTrained.mp3');
+	stc.volume = 0.1;
+	stc.play();
+}

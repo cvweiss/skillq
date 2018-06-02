@@ -43,6 +43,7 @@
 										<script type="text/javascript">
 											$(function () {
 												$('#countdown{{char.characterID}}').countdown({until: '{{ char.trainingSeconds }}', compact: true });
+												setTimeout("stc();", {{ char.trainingSeconds }}000);
 												{% if qf %}$('#queueTime{{ char.characterID }}').countdown({until: '{{ char.queueFinishesSeconds }}', compact: true});{% endif %}
 											});
 										</script>
