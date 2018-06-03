@@ -14,7 +14,7 @@
                         {{ char.corporationName }}<br/>
                         {% if char.allianceID %}{{ char.allianceName }}<br/>{% endif %}
                         {% if not isShare %}{{ char.balance|number_format(2) }} ISK<br/>{% endif %}
-                        {% if training.typeName %}a
+                        {% if training.typeName %}
                                 {% set field = training %} {% include 'components/text_item.html' %}<br/>
                                 {% if queueFinishes < 86400 %}
                                 <p class="text-error">Empty Queue: <span id="queueTime"></span></p>
