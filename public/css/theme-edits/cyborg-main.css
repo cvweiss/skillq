@@ -1,31 +1,3 @@
-body { background-image: none; background-color: #060606; }
-
-.table tbody tr.error td
-{
-  background-color: #771F1F;
-}
-
-select, textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input
-{
-color: black;
- }
-
-.item_dropped_row {
-	background-color: #093609; 
-}
-.item_dropped {
-	color: white;
-}
-.item_dropped_qty {
-	color: white;
-}
-.item_destroyed, .red {
-	color: red;
-}
-.green {
-	color: green;
-}
-
-.table-no-hover tbody tr:hover td, .table tbody tr:hover th {
-	background-color: transparent;
+.dropdown-menu li a {
+	color: #EBEBEB;
 }
