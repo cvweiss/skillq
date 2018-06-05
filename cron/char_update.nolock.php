@@ -173,7 +173,7 @@ function fail($guzzler, $params, $ex)
 			if ($code == 420) {
 				Util::out("420'ed");
 				$guzzler->finish();
-				exit("420'ed");
+				exit("420'ed\n");
 			}
 			break;
 		default:
