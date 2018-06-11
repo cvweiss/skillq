@@ -1,6 +1,6 @@
 <?php
 
-for ($a = 0; $a < 5; $a++) pcntl_fork();
+for ($a = 0; $a < 4; $a++) pcntl_fork();
 
 require_once "../init.php";
 
@@ -167,15 +167,14 @@ function fail($guzzler, $params, $ex)
 		case 500:
 		case 502:
 		case 504:
-			// Try again 
+		default:
 			//sleep(1);
 			//if ($row['attempts'] < 3) $redis->lpush("skq:esiQueue", serialize($params['row']));
 			if ($code == 420) {
 				Util::out("420'ed");
 				$guzzler->finish();
-				exit("420'ed\n");
+				exit();
 			}
 			break;
-		default:
 	}
 }
