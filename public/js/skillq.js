@@ -16,6 +16,7 @@ function verifyRemoval(charName, charID)
 
 function stc()
 {
+return;
 	var stc = new Audio('/audio/SkillTrained.mp3');
 	stc.volume = 0.1;
 	stc.play();
