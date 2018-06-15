@@ -27,7 +27,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$refreshToken = $row['refresh_token'];
 	$accessToken = @$row['accessToken'];
 
-	$headers = ['Authorization' =>"Bearer $accessToken", "Content-Type" => "application/json", 'etag' => $redis];
+	$headers = ['Authorization' =>"Bearer $accessToken", "Content-Type" => "application/json"];
 	$params = ['row' => $row];
 
 	$count++;
@@ -49,7 +49,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 			$guzzler->call($url, "loadPublicData", "fail", $params, $headers);
 			break;
 		default:
-			Util::out("Unknown scope: $scope");
+			//Util::out("Unknown scope: $scope");
 	}
 }
 $guzzler->finish();
@@ -77,15 +77,15 @@ function loadSkills(&$guzzler, &$params, &$content)
 
 function loadQueue(&$guzzler, &$params, &$content) 
 {
+	$charID = $params['row']['characterID'];
 	if ($content != "") {
-		$charID = $params['row']['characterID'];
 		$queue = json_decode($content, true);
+		Db::execute("delete from skq_character_queue where characterID = :charID", [":charID" => $charID]);
+		Db::execute("update skq_character_skills set queue = 0 where characterID = :charID", [":charID" => $charID]);
+		Db::execute("delete from skq_character_training where characterID = :charID", [':charID' => $charID]);
 		if (sizeof($queue) > 0) {
 			$firstV = array_shift(array_slice($queue, 0, 1)); 
 			if (isset($firstV['level_start_sp'])) {
-				Db::execute("delete from skq_character_queue where characterID = :charID", [":charID" => $charID]);
-				Db::execute("update skq_character_skills set queue = 0 where characterID = :charID", [":charID" => $charID]);
-				Db::execute("delete from skq_character_training where characterID = :charID", [':charID' => $charID]);
 				foreach ($queue as $qs) {
 					Db::execute("insert ignore into skq_character_queue (characterID, queuePosition, typeID, level, startSP, endSP, startTime, endTime) values
 							(:charID, :qp, :typeID, :level, :startSP, :endSP, :startTime, :endTime)",
