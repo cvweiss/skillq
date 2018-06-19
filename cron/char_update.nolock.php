@@ -1,12 +1,10 @@
 <?php
 
-for ($a = 0; $a < 4; $a++) pcntl_fork();
-
 require_once "../init.php";
 
 use zkillboard\crestsso\CrestSSO;
 
-$guzzler = Util::getGuzzler(10, 1);
+$guzzler = Util::getGuzzler();
 
 global $clientID, $secretKey, $callbackURL, $scopes;
 
@@ -27,7 +25,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$refreshToken = $row['refresh_token'];
 	$accessToken = @$row['accessToken'];
 
-	$headers = ['Authorization' =>"Bearer $accessToken", "Content-Type" => "application/json"];
+	$headers = ['Authorization' =>"Bearer $accessToken", "Content-Type" => "application/json", 'etag' => $redis];
 	$params = ['row' => $row];
 
 	$count++;
@@ -49,11 +47,11 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 			$guzzler->call($url, "loadPublicData", "fail", $params, $headers);
 			break;
 		default:
-			//Util::out("Unknown scope: $scope");
+			Util::out("Unknown scope: $scope");
 	}
 }
 $guzzler->finish();
-//if ($count > 0) Util::out("Fetch Processed $count => " . number_format($count / 60, 1) . "rps");
+if ($count > 0) Util::out("Fetch Processed $count => " . number_format($count / 60, 1) . "rps");
 
 function loadSkills(&$guzzler, &$params, &$content)
 {
