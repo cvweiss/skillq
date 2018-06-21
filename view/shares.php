@@ -21,6 +21,8 @@ if ($_POST) {
     }
 
     $shareID = trim($_POST["shareid"]);
+    $shareTime = (int) trim(@$_POST["sharetime"]);
+    if ($shareTime <= 0 || $shareTime > 999) $shareTime = 3;
     $cleanShareID = preg_replace("/[^A-Za-z0-9 ]/", '', $shareID);
     if ($shareID != $cleanShareID) {
 	$message = "A custom shareID must be alphanumeric only";
@@ -51,8 +53,8 @@ if ($_POST) {
     if ($message === "") {
         Db::execute(
           "insert into skq_character_shares (userID, shareID, characterID, expirationTime) values
-                                  (:userID, :shareID, :charID, date_add(now(), interval 3 day))",
-          array(":userID" => $userID, ":charID" => $charID, ":shareID" => $shareID)
+                                  (:userID, :shareID, :charID, date_add(now(), interval :days day))",
+          array(":userID" => $userID, ":charID" => $charID, ":shareID" => $shareID, ':days' => $shareTime)
         );
         $message = "Your share has been created!";
     }
