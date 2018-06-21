@@ -65,16 +65,16 @@
         },
         {
             "name": "cvweiss/guzzler",
-            "version": "v0.0.4",
+            "version": "v0.0.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/cvweiss/guzzler.git",
-                "reference": "e2aca65ee9ed468cf25a912bbf7164f7aad4b0ad"
+                "reference": "c11b4aee59ebc9dbcc4b43147f53fbbe3632d8f7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/cvweiss/guzzler/zipball/e2aca65ee9ed468cf25a912bbf7164f7aad4b0ad",
-                "reference": "e2aca65ee9ed468cf25a912bbf7164f7aad4b0ad",
+                "url": "https://api.github.com/repos/cvweiss/guzzler/zipball/c11b4aee59ebc9dbcc4b43147f53fbbe3632d8f7",
+                "reference": "c11b4aee59ebc9dbcc4b43147f53fbbe3632d8f7",
                 "shasum": ""
             },
             "require": {
@@ -97,7 +97,7 @@
                 }
             ],
             "description": "A utility that allows multiples sequences of calls with execution of code between each sequence.",
-            "time": "2018-06-01T19:14:37+00:00"
+            "time": "2018-06-11T13:46:48+00:00"
         },
         {
             "name": "cvweiss/zcache",
