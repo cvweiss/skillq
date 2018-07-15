@@ -36,7 +36,7 @@ Db::execute("delete from skq_email_history where expireTime < now()");
 function findChars($charID, &$chars = []) {
         if (sizeof($chars) == 0) $chars = [$charID];
         foreach ($chars as $char) {
-                $result = Db::query("select char2 c from skq_character_associations where char1 = :char", [':char' => $char]);
+                $result = Db::query("select char2 c from skq_character_associations where char1 = :char", [':char' => $char], 1);
                 foreach ($result as $row) {
                         $nextChar = (int) $row['c'];
                         if (!in_array($nextChar, $chars)) {
@@ -46,7 +46,7 @@ function findChars($charID, &$chars = []) {
                 }
         }
         foreach ($chars as $char) {
-                $result = Db::query("select char1 c from skq_character_associations where char2 = :char", [':char' => $char]);
+                $result = Db::query("select char1 c from skq_character_associations where char2 = :char", [':char' => $char], 1);
                 foreach ($result as $row) {
                         $nextChar = (int) $row['c'];
                         if (!in_array($nextChar, $chars)) {
