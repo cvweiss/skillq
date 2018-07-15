@@ -8,6 +8,7 @@ CREATE TABLE `skq_character_skills` (
   `training` tinyint(1) NOT NULL DEFAULT '0',
   `queue` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`characterID`,`typeID`),
-  KEY `characterID` (`characterID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8  ROW_FORMAT=COMPRESSED;
+  KEY `characterID` (`characterID`),
+  KEY `characterID_2` (`characterID`,`typeID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPRESSED;
 

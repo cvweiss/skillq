@@ -13,6 +13,7 @@ CREATE TABLE `skq_character_info` (
   `queueFinishes` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `unallocated_sp` varchar(16) DEFAULT '0',
   `customOrder` decimal(3,0) DEFAULT '0',
+  `grouped` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`characterID`),
   UNIQUE KEY `character_ID` (`characterID`),
   KEY `characterID` (`characterID`)

@@ -10,7 +10,18 @@
 		{% endif %}
 		<div class="row{{ fluid }}">
 			<div class="characters span12">
+				{% set curGroup = "" %}
 				{% for char in chars %}
+					{% if char.grouped != curGroup %}
+						</div></div>
+						<div>
+						<h4 style='margin-top: 0px;'>{{ char.grouped }}</h4>
+						<hr/>
+						</div>
+						<div class="row{{ fluid }}">
+						<div class="characters span12">
+						{% set curGroup = char.grouped %}
+					{% endif %}
 					{% set netWealth = netWealth + char.balance %}
 					{% set netSP = netSP + char.skillPoints %}
 					<div class="pull-left" style="margin-right: 1em;"><div class="well well-small" style="width: 310px; height: 150px; max-height: 150px;">

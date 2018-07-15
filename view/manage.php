@@ -34,8 +34,9 @@ if ($_POST) {
 	if (in_array($orderBy, ['characterName', 'balance desc', 'skillPoints desc', 'queueFinishes', 'customOrder'])) {
 		UserConfig::set('orderBy', $orderBy);
 		foreach ($c as $charID) {
-			$custom = (int) $_POST["custom-$charID"];
-			Db::execute("update skq_character_info set customOrder = :custom where characterID = :charID", [':charID' => $charID, 'custom' => $custom]);
+			$custom = (int) @$_POST["custom-$charID"];
+			$group = @$_POST["group-$charID"];
+			Db::execute("update skq_character_info set customOrder = :custom, grouped = :group where characterID = :charID", [':charID' => $charID, 'custom' => $custom, ':group' => $group]);
 		}
 	}
 	$app->redirect('/manage/');
