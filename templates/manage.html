@@ -30,13 +30,17 @@
 </div>
 </div>
 <h4>Order By:</h4>
+	<select name="groupOrderBy">
+		<option value="grouped desc" {% if groupOrderBy == "grouped desc" %}selected{% endif %}>Group (desc)</option>
+		<option value="grouped asc" {% if groupOrderBy == "grouped asc" %}selected{% endif %}>Group (asc)</option>
+	</select>
 	<select name="orderBy">
 		<option value="skillPoints desc" {% if orderBy == "skillPoints desc"%}selected{% endif %}>Skillpoints (desc)</option>
 		<option value="balance desc" {% if orderBy == "balance desc" %}selected{% endif %}>Wallet Balance (desc)</option>
 		<option value="characterName" {% if orderBy == "characterName" %}selected{% endif %}>Name (asc)</option>
 		<option value="queueFinishes" {% if orderBy == "queueFinishes" %}selected{% endif %}>Queue Finishes (asc)</option>
 		<option value="customOrder" {% if orderBy == "customOrder" %}selected{% endif %}>Custom Order</option>
-	</select>
+	</select><br/><br/>
 	<button class="btn btn-primary" type='submit' value='Save'>Save</button>
 </form>
 {% endblock %}

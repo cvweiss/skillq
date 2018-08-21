@@ -40,11 +40,12 @@ if (isset($_SESSION['character_id']) && $_SESSION['character_id'] > 0) {
 	$chars = findChars($_SESSION['character_id']);
 	$validChars = $chars;
 	$orderBy = UserConfig::get("orderBy", "skillPoints desc");
+	$groupOrderBy = UserConfig::get("groupOrderBy", "grouped desc");
 	foreach ($chars as $charID) {
 		// Make sure we are always displaying the current skill in the queue
 		Db::execute("replace into skq_character_training (characterID, trainingStartTime , trainingEndTime , trainingTypeID , trainingStartSP , trainingDestinationSP , trainingToLevel ) select characterID , startTime , endTime , typeID , startSP , endSP , level from skq_character_queue  where endTime >= now() and characterID = :charID order by startTime limit 1", [':charID' => $charID]);
 	}
-	$chars = Db::query("select distinct i.characterID, characterName, trainingTypeID typeID, trainingToLevel, trainingEndTime, balance, skillPoints, queueFinishes, grouped from skq_character_info i left join skq_character_training t on (i.characterID = t.characterID) where i.characterID in (" . implode(",", $chars) . ") order by grouped desc, $orderBy");
+	$chars = Db::query("select distinct i.characterID, characterName, trainingTypeID typeID, trainingToLevel, trainingEndTime, balance, skillPoints, queueFinishes, grouped from skq_character_info i left join skq_character_training t on (i.characterID = t.characterID) where i.characterID in (" . implode(",", $chars) . ") order by $groupOrderBy, $orderBy");
 	$twig->addGlobal("characters", $chars);
 }
 

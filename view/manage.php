@@ -39,10 +39,14 @@ if ($_POST) {
 			Db::execute("update skq_character_info set customOrder = :custom, grouped = :group where characterID = :charID", [':charID' => $charID, 'custom' => $custom, ':group' => $group]);
 		}
 	}
+	$groupOrderBy = (string) @$_POST['groupOrderBy'];
+	if ($groupOrderBy != "grouped desc" && $groupOrderBy != "grouped asc") $groupOrderBy = "grouped desc";
+	UserConfig::set('groupOrderBy', $groupOrderBy);
 	$app->redirect('/manage/');
 }
 
 $orderBy = UserConfig::get("orderBy", "skillPoints desc");
+$groupOrderBy = UserConfig::get("groupOrderBy", "grouped desc");
 $scopes = Db::query("select * from skq_character_info where characterID in (" . implode(',', $c) . ") order by $orderBy");
 Info::addInfo($scopes);
-return $app->render("manage.html", ["scopes" => $scopes, 'orderBy' => $orderBy]);
+return $app->render("manage.html", ["scopes" => $scopes, 'orderBy' => $orderBy, 'groupOrderBy' => $groupOrderBy]);
