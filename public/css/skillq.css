@@ -15,3 +15,6 @@
   z-index: 1000000;
   background: url('/img/semi_transparent.png');
 }
+
+.container,.navbar-static-top .container,.navbar-fixed-top .container,.navbar-fixed-bottom .container{width:1200px;}
+.span12{width:1200px;}
