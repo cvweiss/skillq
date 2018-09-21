@@ -80,7 +80,8 @@ function loadQueue(&$guzzler, &$params, &$content)
 		Db::execute("update skq_character_skills set queue = 0 where characterID = :charID", [":charID" => $charID]);
 		Db::execute("delete from skq_character_training where characterID = :charID", [':charID' => $charID]);
 		if (sizeof($queue) > 0) {
-			$firstV = array_shift(array_slice($queue, 0, 1)); 
+            $sliced = array_slice($queue, 0, 1);
+			$firstV = array_shift($sliced);
 			if (isset($firstV['level_start_sp'])) {
 				foreach ($queue as $qs) {
 					Db::execute("insert ignore into skq_character_queue (characterID, queuePosition, typeID, level, startSP, endSP, startTime, endTime) values

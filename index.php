@@ -1,6 +1,6 @@
 <?php
+
 $t = microtime(true);
-//include_once("/var/killboard/xhprof/inc/prepend.php");
 
 // Fire up the session!
 session_cache_limiter(false);

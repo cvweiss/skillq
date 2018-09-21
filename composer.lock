@@ -65,16 +65,16 @@
         },
         {
             "name": "cvweiss/guzzler",
-            "version": "v0.0.8",
+            "version": "v0.0.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/cvweiss/guzzler.git",
-                "reference": "85f0042966551878d964d9b376f45d098e23fcee"
+                "reference": "c945fa713403ef59dea2348251b130d7b70d93b8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/cvweiss/guzzler/zipball/85f0042966551878d964d9b376f45d098e23fcee",
-                "reference": "85f0042966551878d964d9b376f45d098e23fcee",
+                "url": "https://api.github.com/repos/cvweiss/guzzler/zipball/c945fa713403ef59dea2348251b130d7b70d93b8",
+                "reference": "c945fa713403ef59dea2348251b130d7b70d93b8",
                 "shasum": ""
             },
             "require": {
@@ -97,7 +97,7 @@
                 }
             ],
             "description": "A utility that allows multiples sequences of calls with execution of code between each sequence.",
-            "time": "2018-08-24T15:54:14+00:00"
+            "time": "2018-09-18T13:25:59+00:00"
         },
         {
             "name": "cvweiss/zcache",
@@ -600,7 +600,7 @@
                 {
                     "name": "Andrew Smith",
                     "email": "a.smith@silentworks.co.uk",
-                    "homepage": "http://thoughts.silentworks.co.uk/"
+                    "homepage": "http://www.silentworks.co.uk/"
                 },
                 {
                     "name": "Josh Lockhart",
@@ -746,14 +746,11 @@
             "authors": [
                 {
                     "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com",
-                    "homepage": "http://fabien.potencier.org",
-                    "role": "Lead Developer"
+                    "email": "fabien@symfony.com"
                 },
                 {
                     "name": "Armin Ronacher",
-                    "email": "armin.ronacher@active-4.com",
-                    "role": "Project Founder"
+                    "email": "armin.ronacher@active-4.com"
                 }
             ],
             "description": "Twig, the flexible, fast, and secure template language for PHP",
