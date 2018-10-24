@@ -22,7 +22,7 @@
 		<td><input type='textbox' name="group-{{ char.characterID }}" value="{{ char.grouped }}" style="width: 5em;"></td>
 		<td><a href='/char/{{ char.characterName}}'>{{ char.characterName }}{% if char.missingScopes %}<span class="alert alert-error">!<span>{% endif %}</a></td>
 		<td>{{ char.lastChecked }}</td>
-		<td><span class='pull-right'><a href='#' onClick="verifyRemoval('{{ char.characterName }}', {{ char.characterID }}); return false;">X</a></span></td>
+		<td><span class='pull-right'><a href='#' onClick="verifyRemoval('{{ char.characterName|escape('js') }}', {{ char.characterID }}); return false;">X</a></span></td>
 	</tr>
 	{% endfor %}
 	</tbody>
