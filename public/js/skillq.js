@@ -4,7 +4,7 @@ function refreshPage() {
 
 function verifyRemoval(charName, charID)
 {
-	if (confirm('Are you sure you want to remove ' + charName + '?')) {
+	if (confirm('Are you sure you want to remove ' + encodeURI(charName) + '?')) {
 		$.ajax({
 		  type: "POST",
  		  url: '/manage/',
