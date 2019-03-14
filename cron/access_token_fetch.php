@@ -22,6 +22,10 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	foreach ($rows as $row) {
 		while ($redis->llen("skq:esiQueue") > 100) usleep(100000);
 		$charID = $row['characterID'];
+        if ($charID == null){
+            print_r($row);
+            continue;
+        }
 		$refreshToken = $row['refresh_token'];
 
 		if (in_array($charID, $i)) continue;
@@ -33,7 +37,6 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 		$params = ['row' => $row];
 
 		$guzzler->call($url, "accessTokenSuccess", "fail", $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
-		//Util::out("  SSO: " . substr("$charID", strlen("$charID") - 6, 6));
 		$count++;
 	} 
 	$guzzler->tick();

@@ -16,7 +16,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$row = unserialize($redis->lpop("skq:esiQueue"));
 	if ($row == null) {
 		$guzzler->tick();
-		usleep(100000);
+        sleep(1);
 		continue;
 	}
 
@@ -31,19 +31,19 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$count++;
 	switch ($scope) {
 		case 'esi-skills.read_skills.v1':
-			$url = "https://esi.tech.ccp.is/v4/characters/$charID/skills/";
+			$url = "https://esi.evetech.net/v4/characters/$charID/skills/";
 			$guzzler->call($url, "loadSkills", "fail", $params, $headers);
 			break;
 		case 'esi-skills.read_skillqueue.v1':
-			$url = "https://esi.tech.ccp.is/v2/characters/$charID/skillqueue/";
+			$url = "https://esi.evetech.net/v2/characters/$charID/skillqueue/";
 			$guzzler->call($url, "loadQueue", "fail", $params, $headers);
 			break;
 		case 'esi-wallet.read_character_wallet':
-			$url = "https://esi.tech.ccp.is/v1/characters/$charID/wallet/";
+			$url = "https://esi.evetech.net/v1/characters/$charID/wallet/";
 			$guzzler->call($url, "loadWallet", "fail", $params, $headers);
 			break;
 		case 'publicData':
-			$url = "https://esi.tech.ccp.is/v4/characters/$charID/";
+			$url = "https://esi.evetech.net/v4/characters/$charID/";
 			$guzzler->call($url, "loadPublicData", "fail", $params, $headers);
 			break;
 		default:

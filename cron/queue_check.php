@@ -5,6 +5,9 @@ require_once "../init.php";
 $hours = 24;
 $queues = Db::query("select * from skq_character_info where queueFinishes > now() and queueFinishes < date_add(now(), interval $hours hour)");
 foreach ($queues as $queue) {
+    $characterID = $queue['characterID'];
+    if ($redis->get("skq::checked:$characterID") == "true") continue;
+    $redis->setex("skq::checked:$characterID", 3600, "true");
 	// Need to get the user info
 	$chars = [$queue['characterID']];
 	$chars = findChars($queue['characterID'], $chars);
