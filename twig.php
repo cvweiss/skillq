@@ -17,9 +17,9 @@ $twig = $app->view()->getEnvironment();
 // Twig globals
 $twig->addGlobal("siteurl", $baseAddr);
 //$twig->addGlobal("fullsiteurl", "http://".$_SERVER["SERVER_NAME"].$_SERVER["REQUEST_URI"]);
-$twig->addGlobal("image_character", "https://imageserver.eveonline.com/Character/");
-$twig->addGlobal("image_corporation", "https://imageserver.eveonline.com/Corporation/");
-$twig->addGlobal("image_alliance", "https://imageserver.eveonline.com/Alliance/");
+$twig->addGlobal("image_character", "https://images.evetech.net/characters/");
+$twig->addGlobal("image_corporation", "https://images.evetech.net/corporations/");
+$twig->addGlobal("image_alliance", "https://images.evetech.net/alliances/");
 $twig->addGlobal("siteName", $siteName);
 
 $twig->addExtension(new UserGlobals());

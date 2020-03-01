@@ -29,12 +29,12 @@
 							<tr>
 								<td style='width: 130px;' class='hidden-phone'>
 									<a href="/char/{{ char.characterName|url_encode }}">
-										<img class="hidden-phone" src="{{ image_character }}{{ char.characterID }}_128.jpg" class="hidden-phone" style="height: 128px; width: 128px;">
+										<img class="hidden-phone" src="{{ image_character }}{{ char.characterID }}/portrait?size=128" class="hidden-phone" style="height: 128px; width: 128px;">
 									</a>
 								</td>
 								<td style='width: 66px;' class='visible-phone'>
 									<a href="/char/{{ char.characterName|url_encode }}">
-										<img class="visible-phone" src="{{ image_character }}{{ char.characterID }}_64.jpg" class="visible-phone" style="height: 64px; width: 64px;">
+										<img class="visible-phone" src="{{ image_character }}{{ char.characterID }}/portrait?size=64" class="visible-phone" style="height: 64px; width: 64px;">
 									</a>
 								<td>
 									<strong><a href="/char/{{ char.characterName|url_encode }}">{{ char.characterName }}{% if char.missingScopes %}<span class="alert alert-error">!<span>{% endif %}</a></strong><br/>
