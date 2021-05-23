@@ -40,7 +40,7 @@
 <div class="row">
         <div class="span8">
                 <div class="pull-left">
-                        <h4>Skills <em style="font-size: 75%">Total: {{ totalSP|number_format(0) }} SP / {{ skills|length|number_format(0) }} Skills{% if char.unallocated_sp != 0 %}&nbsp;&nbsp;<span class="alert" style="border: 0; padding:0;"> ({{ char.unallocated_sp|number_format(0) }} Unallocated SP){% endif %}</em></h4>
+                        <h4>Skills <em style="font-size: 75%">Total:&nbsp;{{ totalSP|number_format(0) }} SP /&nbsp;{{ skills|length|number_format(0) }}&nbsp;Skills{% if char.unallocated_sp != 0 %}&nbsp;&nbsp;<span class="alert" style="border: 0; padding:0;"> ({{ char.unallocated_sp|number_format(0) }} Unallocated SP){% endif %}</em></h4>
                 </div>
                 <div class="pull-right span1" style="position: relative; bottom: -1.75em;">
         <ul class="nav pull-right hidden-phone">
@@ -65,7 +65,7 @@
                 <thead><tr><th colspan="2" id="group{{skill.groupID}}" onClick="$('.skillGroup{{skill.groupID}}').toggle(); return false;" style="cursor: pointer;">
                         <i class="icon-list"></i>
                         {{ currentGroup }}
-                         <em style="font-size: 75%">{{ attribute(groupSP, skill.groupID).sp|number_format(0) }} SP / {{ attribute(groupSP, skill.groupID).count|number_format(0) }} Skills</em></th></tr></thead>
+                         <em style="font-size: 75%">{{ attribute(groupSP, skill.groupID).sp|number_format(0) }} SP /&nbsp;{{ attribute(groupSP, skill.groupID).count|number_format(0) }}&nbsp;Skills</em></th></tr></thead>
                 <tbody>
         {% endif %}
         <tr class="skillGroup{{skill.groupID}} hide level{{ skill.level }} skill">
