@@ -1,6 +1,6 @@
 <?php
 
-require_once "../init.php";
+require_once "../../init.php";
 
 $tables = array("dgmAttributeCategories", "dgmAttributeTypes", "dgmTypeAttributes", "invGroups", "invTypes");
 
