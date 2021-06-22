@@ -1,16 +1,15 @@
 {
     "require": {
         "slim/slim": "2.1.0",
-        "slim/extras": "2.0.0",
-        "twig/twig": "1.15",
-        "twig/extensions": "1.*",
-        "aptoma/twig-markdown": "*",
-        "phpmailer/phpmailer": "*",
-	"cvweiss/zlibrary":"*",
-        "zkillboard/crestsso": "^0.0.5",
-        "guzzlehttp/guzzle": "^6.3",
-        "cvweiss/guzzler": "*"
+            "slim/extras": "2.0.0",
+            "twig/twig": "1.15",
+            "twig/extensions": "1.*",
+            "aptoma/twig-markdown": "*",
+            "cvweiss/zlibrary":"*",
+            "zkillboard/crestsso": "^0.0.5",
+            "guzzlehttp/guzzle": "^6.3",
+            "cvweiss/guzzler": "*"
     },
-    "minimum-stability": "stable",
-	"prefer-stable": true
+        "minimum-stability": "stable",
+        "prefer-stable": true
 }
