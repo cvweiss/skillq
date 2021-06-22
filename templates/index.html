@@ -5,9 +5,6 @@
 
 {% block content %}
 	{% if chars %}
-		{% if showEmailReminder %}
-			<div class="alert">No email on file to notify you, please <a href='/account/'>click here</a> to update.</div>
-		{% endif %}
 		<div class="row{{ fluid }}">
 			<div class="characters span12">
 				{% set curGroup = "" %}
@@ -78,9 +75,9 @@
 		<div class="hero-unit">
 			<p class="alert alert-info">SkillQ is Beta as it is improved to work with ESI</p>
 			<h2>What is SkillQ?</h2>
-			<p>SkillQ allows you to monitor your skills in a single place using any browser on your desktop or mobile device.  SkillQ will also email you when your skill queue gets low: you will receive emails when your skill queue has less than 24 hours and 6 hours.</p><p>SkillQ is a free service provided to you by the same guy that runs <a href='https://zkillboard.com/' target='_blank'>zKillboard</a>.</p>
+			<p>SkillQ allows you to monitor your skills in a single place using any browser on your desktop or mobile device.  SkillQ is a free service provided to you by the same guy that runs <a href='https://zkillboard.com/' target='_blank'>zKillboard</a>.</p>
 			<p>Here are some example screenshots:</p>
-			<p><img src="/img/skillq_01.png"/><br/><br/><img src="/img/skillq_02.png"/><br/><br/><img src="/img/skillq_03.png"></p>
+			<p><img src="/img/skillq_01.png"/><br/><br/><img src="/img/skillq_02.png"/></p>
 		</div>
 	{% endif %}
 {% endblock %}

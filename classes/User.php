@@ -121,7 +121,7 @@ class User
     {
         if (isset($_SESSION["loggedin"])) {
             $id = Db::query(
-              "SELECT id, characterID, email, dateCreated, admin, moderator FROM skq_users WHERE characterID = :username",
+              "SELECT id, characterID, dateCreated, admin, moderator FROM skq_users WHERE characterID = :username",
               array(":username" => $_SESSION["loggedin"]),
               1
             );
@@ -131,7 +131,6 @@ class User
               "username"    => $id[0]["username"],
               "admin"       => $id[0]["admin"],
               "moderator"   => $id[0]["moderator"],
-              "email"       => $id[0]["email"],
               "dateCreated" => $id[0]["dateCreated"]
             );
         } else {
