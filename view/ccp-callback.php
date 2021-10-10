@@ -1,6 +1,6 @@
 <?php
 
-use zkillboard\crestsso\CrestSSO;
+use zkillboard\eveonlineoauth2\EveOnlineSSO;
 
 global $clientID, $secretKey, $callbackURL, $scopes, $redis;
 
@@ -17,7 +17,7 @@ foreach ($params as $param) {
 
 global $clientID, $secretKey, $callbackURL, $scopes;
 
-$sso = new CrestSSO($clientID, $secretKey, $callbackURL, $scopes);
+$sso = new EveOnlineSSO($clientID, $secretKey, $callbackURL, $scopes);
 $code = $p['code']; //filter_input(INPUT_GET, 'code');
 $state = $p['state']; //$app->request()->get('state');
 $userInfo = $sso->handleCallback($code, $state, $_SESSION);

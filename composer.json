@@ -6,9 +6,10 @@
             "twig/extensions": "1.*",
             "aptoma/twig-markdown": "*",
             "cvweiss/zlibrary":"*",
-            "zkillboard/crestsso": "^0.0.5",
+            "zkillboard/eveonlineoauth2": "*",
             "guzzlehttp/guzzle": "^6.3",
-            "cvweiss/guzzler": "*"
+            "cvweiss/guzzler": "*",
+        "firebase/php-jwt": "^5.4"
     },
         "minimum-stability": "stable",
         "prefer-stable": true

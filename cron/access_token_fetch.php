@@ -2,7 +2,7 @@
 
 require_once "../init.php";
 
-use zkillboard\crestsso\CrestSSO;
+use zkillboard\eveonlineoauth2\EveOnlineSSO;
 
 $guzzler = Util::getGuzzler(10);
 
@@ -10,6 +10,8 @@ global $clientID, $secretKey, $callbackURL, $scopes;
 
 $accessTokens = [];
 $errorTokens = [];
+
+$sso = new EveOnlineSSO($clientID, $secretKey, $callbackURL, $scopes);
 
 $count = 0;
 $i = [];
@@ -20,24 +22,26 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$notIn = sizeof($i) > 0 ? " and characterID not in (" . implode(",", $i) . ") " : "";
 	$rows = Db::query("select characterID, scope, refresh_token from skq_scopes where lastSsoChecked < date_sub(now(), interval 60 minute) and errorCount < 10 and refresh_token != '' $notIn order by lastSsoChecked limit 100", [], 0);
 	foreach ($rows as $row) {
+        print_r($row);
 		while ($redis->llen("skq:esiQueue") > 100) usleep(100000);
 		$charID = $row['characterID'];
         if ($charID == null){
             print_r($row);
             continue;
         }
-		$refreshToken = $row['refresh_token'];
 
 		if (in_array($charID, $i)) continue;
 		$i[] = $charID;
 		Db::execute("update skq_scopes set lastSsoChecked = now() where characterID = :charID", [':charID' => $charID]);
+		$refreshToken = $row['refresh_token'];
 
-		$headers = ['Authorization' =>'Basic ' . base64_encode($clientID . ':' . $secretKey), "Content-Type" => "application/json"];
-		$url = 'https://login.eveonline.com/oauth/token';
-		$params = ['row' => $row];
-
-		$guzzler->call($url, "accessTokenSuccess", "fail", $params, $headers, 'POST', json_encode(['grant_type' => 'refresh_token', 'refresh_token' => $refreshToken]));
-		$count++;
+        $accessToken = $sso->getAccessToken($refreshToken);
+	    $scopes = Db::query("select * from skq_scopes where characterID = :charID", [':charID' => $charID]);
+        foreach ($scopes as $r) {
+		    $r['accessToken'] = $accessToken;
+            Db::execute("update skq_scopes set errorCount = 0, lastErrorCode = 0 where characterID = :charID and scope = :scope", [':charID' => $r['characterID'], ':scope' => $r['scope']]);
+            $redis->rpush("skq:esiQueue", serialize($r));
+        }
 	} 
 	$guzzler->tick();
 	if (sizeof($rows) == 0) sleep(1);
@@ -49,6 +53,7 @@ if ($count > 0) Util::out("SSO Processed $count => " . number_format($count / 60
 function accessTokenSuccess(&$guzzler, &$params, &$content)
 {
 	global $redis;
+    echo "success\n";
 
 	$row = $params['row'];
 	$charID = $row['characterID'];
@@ -69,6 +74,7 @@ function fail($guzzler, $params, $ex)
 {
 	$code = $ex->getCode();
 	$row = $params['row'];
+    echo "fail\n";
 
 	switch ($code) {
 		case 0:

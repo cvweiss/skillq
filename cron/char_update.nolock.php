@@ -43,7 +43,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 			$guzzler->call($url, "loadWallet", "fail", $params, $headers);
 			break;
 		case 'publicData':
-			$url = "https://esi.evetech.net/v4/characters/$charID/";
+			$url = "https://esi.evetech.net/v5/characters/$charID/";
 			$guzzler->call($url, "loadPublicData", "fail", $params, $headers);
 			break;
 		default:

@@ -2,10 +2,10 @@
 
 require_once "../init.php";
 
-use zkillboard\crestsso\CrestSSO;
+use zkillboard\eveonlineoauth2\EveOnlineSSO;
 
 global $clientID, $secretKey, $callbackURL, $scopes;
-$sso = new CrestSSO($clientID, $secretKey, $callbackURL, $scopes);
+$sso = new EveOnlineSSO($clientID, $secretKey, $callbackURL, $scopes);
 
 Db::execute("delete from skq_corporations where corporationID = 0");
 Db::execute("delete from skq_alliances where allianceID = 0");
