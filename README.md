@@ -2,7 +2,7 @@
 A web based Skill Monitor for Eve Online.
 
 ### What is SkillQ?
-SkillQ allows you to monitor your skills in a single place using any browser on your desktop or mobile device. SkillQ will also email you when your skill queue gets low: you will receive emails when your skill queue has less than 24 hours and 6 hours.
+SkillQ allows you to monitor your skills in a single place using any browser on your desktop or mobile device. 
 
 SkillQ is a free service provided to you by the same guy that runs zKillboard.
 
@@ -11,8 +11,6 @@ Here are some example screenshots:
 ![Screenshot1](https://skillq.net/img/skillq_01.png)
 
 ![Screenshot2](https://skillq.net/img/skillq_02.png)
-
-![Screenshot3](https://skillq.net/img/skillq_03.png)
 
 ### I want to install it, will you help me?
 
