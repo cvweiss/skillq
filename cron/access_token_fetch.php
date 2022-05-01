@@ -22,7 +22,6 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$notIn = sizeof($i) > 0 ? " and characterID not in (" . implode(",", $i) . ") " : "";
 	$rows = Db::query("select characterID, scope, refresh_token from skq_scopes where lastSsoChecked < date_sub(now(), interval 60 minute) and errorCount < 10 and refresh_token != '' $notIn order by lastSsoChecked limit 100", [], 0);
 	foreach ($rows as $row) {
-        print_r($row);
 		while ($redis->llen("skq:esiQueue") > 100) usleep(100000);
 		$charID = $row['characterID'];
         if ($charID == null){
@@ -35,8 +34,14 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 		Db::execute("update skq_scopes set lastSsoChecked = now() where characterID = :charID", [':charID' => $charID]);
 		$refreshToken = $row['refresh_token'];
 
-        $accessToken = $sso->getAccessToken($refreshToken);
+        try {
+            $accessToken = $sso->getAccessToken($refreshToken);
+        } catch (Exception $ex) {
+            DB::execute("delete from skq_scopes where characterID = :charID", [":charID" => $charID]);
+            continue;
+        }
 	    $scopes = Db::query("select * from skq_scopes where characterID = :charID", [':charID' => $charID]);
+        $count++;
         foreach ($scopes as $r) {
 		    $r['accessToken'] = $accessToken;
             Db::execute("update skq_scopes set errorCount = 0, lastErrorCode = 0 where characterID = :charID and scope = :scope", [':charID' => $r['characterID'], ':scope' => $r['scope']]);
