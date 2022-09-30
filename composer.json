@@ -1,8 +1,8 @@
 {
     "require": {
-        "slim/slim": "2.1.0",
+        "slim/slim": "2.2.*",
             "slim/extras": "2.0.0",
-            "twig/twig": "1.38.0",
+            "twig/twig": "1.*.*",
             "twig/extensions": "1.*",
             "aptoma/twig-markdown": "*",
             "cvweiss/zlibrary":"*",
