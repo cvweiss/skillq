@@ -9,7 +9,7 @@
             "zkillboard/eveonlineoauth2": "*",
             "guzzlehttp/guzzle": "^6.3",
             "cvweiss/guzzler": "*",
-        "firebase/php-jwt": "^5.4"
+        "firebase/php-jwt": "^6.0"
     },
         "minimum-stability": "stable",
         "prefer-stable": true
