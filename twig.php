@@ -29,7 +29,7 @@ $twig->addFunction("queryCount", new Twig_Function_Function("Db::getQueryCount")
 $twig->addFunction("isActive", new Twig_Function_Function("Util::isActive"));
 
 $twig->addGlobal("sessionusername", @$_SESSION['character_id']);
-$twig->addGlobal("theme", UserConfig::get("theme", "default"));
+$twig->addGlobal("theme", UserConfig::get("theme", "cyborg"));
 $twig->addGlobal("themes", ['amelia', 'cerulean', 'cyborg', 'default', 'journal', 'readable', 'simplex', 'slate', 'spacelab', 'spruce', 'superhero', 'united']);
 $twig->addGlobal("fluid", UserConfig::get("fluid", ""));
 
@@ -37,6 +37,7 @@ $chars = [];
 $userID = null;
 if (isset($_SESSION['character_id']) && $_SESSION['character_id'] > 0) {
 	$userID = $_SESSION['character_id'];
+    Db::execute("insert into skq_users (characterID, dateCreated, lastAccess) values (:charID, now(), now()) on duplicate key update lastAccess = now()", [':charID' => $userID]);
 	$chars = findChars($_SESSION['character_id']);
 	$validChars = $chars;
 	$orderBy = UserConfig::get("orderBy", "skillPoints desc");
@@ -61,7 +62,7 @@ function findChars($charID, &$chars = []) {
 			}
 		}
 	}
-	foreach ($chars as $char) {
+	/*foreach ($chars as $char) {
 		$result = Db::query("select char1 c from skq_character_associations where char2 = :char", [':char' => $char], 1);
 		foreach ($result as $row) {
 			$nextChar = (int) $row['c'];
@@ -70,6 +71,6 @@ function findChars($charID, &$chars = []) {
 				findChars($nextChar, $chars);
 			}
 		}
-	}
+	}*/
 	return array_unique($chars);
 }

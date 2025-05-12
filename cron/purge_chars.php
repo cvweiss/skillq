@@ -23,5 +23,6 @@ foreach ($tables as $table) {
 			Util::out("Removing $charID from $table");
 			Db::execute("delete from $table where characterID = :charID", [':charID' => $charID]);
 		}
+	    Db::execute("delete from skq_character_associations where char1 = :charID or char2 = :charID", [':charID' => $charID]);
 	}
 }

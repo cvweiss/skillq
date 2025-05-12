@@ -37,6 +37,7 @@ Db::execute("insert ignore into skq_scopes (characterID, scope, refresh_token) v
 Db::execute("update skq_scopes set lastChecked = 0 where characterID = :charID", [':charID' => $charID]);
 
 if (!isset($_SESSION['character_id']) || $_SESSION['character_id'] == "")  $_SESSION['character_id'] = $charID;
+Db::execute("delete from skq_characer_association where char2 = :charID", [':charID' => $charID]);
 if ($_SESSION['character_id'] > "" && $charID != $_SESSION['character_id']) {
 	Db::execute("insert ignore into skq_character_associations values (:char1, :char2)", [':char1' => $_SESSION['character_id'], ':char2' => $charID]);
 }
