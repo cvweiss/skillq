@@ -1,5 +1,4 @@
 <?php
-
 require_once "../init.php";
 
 use zkillboard\eveonlineoauth2\EveOnlineSSO;
@@ -18,19 +17,22 @@ $i = [];
 Db::execute("update skq_scopes set lastSsoChecked = 0 where errorCount > 0 and lastErrorCode in (403, 502)");
 $minutely = date('Hi');
 while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
+    $guzzler->finish();
+    while ($minutely == date('Hi') && $redis->llen("skq:esiQueue") > 0) usleep(500000);
+    if ($minutely != date('Hi')) break;
 	$exclude = implode(",", $i);
 	$notIn = sizeof($i) > 0 ? " and characterID not in (" . implode(",", $i) . ") " : "";
-	$rows = Db::query("select characterID, scope, refresh_token from skq_scopes where lastSsoChecked < date_sub(now(), interval 60 minute) and errorCount < 10 and refresh_token != '' $notIn order by lastSsoChecked limit 100", [], 0);
+	$rows = Db::query("select characterID, scope, refresh_token from skq_scopes where lastSsoChecked < date_sub(now(), interval 60 minute) and errorCount < 10 and refresh_token != '' $notIn order by lastSsoChecked limit 200", [], 0);
 	foreach ($rows as $row) {
-		while ($redis->llen("skq:esiQueue") > 100) usleep(100000);
+        if ($minutely != date('Hi')) break;
 		$charID = $row['characterID'];
         if ($charID == null){
-            print_r($row);
             continue;
         }
 
 		if (in_array($charID, $i)) continue;
 		$i[] = $charID;
+        Util::out("Prepping $charID");
 		Db::execute("update skq_scopes set lastSsoChecked = now() where characterID = :charID", [':charID' => $charID]);
 		$refreshToken = $row['refresh_token'];
 
@@ -48,8 +50,6 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
             $redis->rpush("skq:esiQueue", serialize($r));
         }
 	} 
-	$guzzler->tick();
-	if (sizeof($rows) == 0) sleep(1);
 }
 $guzzler->finish();
 if ($count > 0) Util::out("SSO Processed $count => " . number_format($count / 60, 1) . "rps");
@@ -79,7 +79,6 @@ function fail($guzzler, $params, $ex)
 {
 	$code = $ex->getCode();
 	$row = $params['row'];
-    echo "fail\n";
 
 	switch ($code) {
 		case 0:

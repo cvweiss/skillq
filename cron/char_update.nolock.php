@@ -15,8 +15,7 @@ $minutely = date('Hi');
 while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$row = unserialize($redis->lpop("skq:esiQueue"));
 	if ($row == null) {
-		$guzzler->tick();
-        sleep(1);
+        for ($tt = 0; $tt <= 100; $tt++) { $guzzler->tick(); usleep(10000); }
 		continue;
 	}
 
@@ -49,6 +48,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 		default:
 			Util::out("Unknown scope: $scope");
 	}
+    //for ($tt = 0; $tt < 10; $tt++) { $guzzler->tick(); usleep(10000); }
 }
 $guzzler->finish();
 if ($count > 0) Util::out("Fetch Processed $count => " . number_format($count / 60, 1) . "rps");
@@ -66,7 +66,7 @@ function loadSkills(&$guzzler, &$params, &$content)
 			Db::execute("update skq_character_info set skillsTrained = :count, skillPoints = :sp where characterID = :charID", [':charID' => $charID, ':count' => count($skills['skills']), ':sp'=> $skills['total_sp']]);
 		}
 		Db::execute("update skq_character_info set unallocated_sp = :usp where characterID = :charID", [':charID' => $charID, ':usp' => ((int) @$skills['unallocated_sp'])]);
-		//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6) . " esi-skills.read_skills.v1");
+		//Util::out("Fetch: " . substr("$charID", strlen("$charID") - 6, 6)  . " esi-skills.read_skills.v1");
 	}
 	clearError($params['row']);
 }
@@ -165,8 +165,8 @@ function fail($guzzler, $params, $ex)
 		case 502:
 		case 504:
 		default:
-			//sleep(1);
-			//if ($row['attempts'] < 3) $redis->lpush("skq:esiQueue", serialize($params['row']));
+			sleep(1);
+			if ($row['attempts'] < 3) $redis->lpush("skq:esiQueue", serialize($params['row']));
 			if ($code == 420) {
 				Util::out("420'ed");
 				$guzzler->finish();

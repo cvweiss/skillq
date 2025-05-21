@@ -28,6 +28,7 @@ function success($guzzler, $params, $content)
 
     $redis->setex('skq:tqStatus', 300, $serverStatus);
     $redis->setex('skq:tqCount', 300, $loggedIn);
+    Util::out("$serverStatus $loggedIn");
 }
 
 function fail($guzzler, $params, $ex)
