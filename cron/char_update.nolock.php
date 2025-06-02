@@ -1,10 +1,12 @@
 <?php
 
+pcntl_fork();
+
 require_once "../init.php";
 
 use zkillboard\crestsso\CrestSSO;
 
-$guzzler = Util::getGuzzler();
+$guzzler = Util::getGuzzler(5);
 
 global $clientID, $secretKey, $callbackURL, $scopes;
 
@@ -15,7 +17,7 @@ $minutely = date('Hi');
 while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$row = unserialize($redis->lpop("skq:esiQueue"));
 	if ($row == null) {
-        for ($tt = 0; $tt <= 100; $tt++) { $guzzler->tick(); usleep(10000); }
+        for ($tt = 0; $tt <= 100; $tt++) { $guzzler->tick(); usleep(100000); }
 		continue;
 	}
 
@@ -23,6 +25,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 	$scope = $row['scope'];
 	$refreshToken = $row['refresh_token'];
 	$accessToken = @$row['accessToken'];
+    Util::out("$charID $scope");
 
 	$headers = ['Authorization' =>"Bearer $accessToken", "Content-Type" => "application/json", 'etag' => $redis];
 	$params = ['row' => $row];
@@ -48,7 +51,7 @@ while ($minutely == date('Hi') && $redis->get("skq:tqStatus") == "ONLINE") {
 		default:
 			Util::out("Unknown scope: $scope");
 	}
-    //for ($tt = 0; $tt < 10; $tt++) { $guzzler->tick(); usleep(10000); }
+    $guzzler->tick();
 }
 $guzzler->finish();
 if ($count > 0) Util::out("Fetch Processed $count => " . number_format($count / 60, 1) . "rps");
@@ -147,7 +150,7 @@ function fail($guzzler, $params, $ex)
 	$code = $ex->getCode();
 	$row = $params['row'];
 
-	Db::execute("update skq_scopes set lastErrorCode = :code, lastSsoChecked = 0 where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
+	Db::execute("update skq_scopes set lastErrorCode = :code, lastSsoChecked = now() where characterID = :charID and scope = :scope", [':charID' => $row['characterID'], ':scope' => $row['scope'], ':code' => $code]);
 
 	$json = json_decode($params['content'], true);
 	if (@$json['error'] == 'invalid_grant' || @$json['error'] == 'invalid_token') {
@@ -157,6 +160,13 @@ function fail($guzzler, $params, $ex)
 	$row['attempts'] = 1 + @$row['attempts'];
 
 	switch ($code) {
+		default:
+            $guzzler->tick();
+            Util::out("Unknown error code $code");
+            break;
+        case 401:
+            $guzzler->tick();
+            break;
 		case 420:
 		case 0:
 		case 400:
@@ -164,7 +174,6 @@ function fail($guzzler, $params, $ex)
 		case 500:
 		case 502:
 		case 504:
-		default:
 			sleep(1);
 			if ($row['attempts'] < 3) $redis->lpush("skq:esiQueue", serialize($params['row']));
 			if ($code == 420) {
