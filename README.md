@@ -17,9 +17,12 @@ SkillQ lets you monitor all your EVE Online characters in one place from any bro
 - **Wallet journal**: recent wallet transactions with party name resolution
 - **Character groups and ordering**: organise characters into named groups and sort by SP, ISK, queue finish time, or a custom order
 - **Shareable character links**: generate a signed, compressed share URL that lets anyone view a snapshot of your skills and queue (automatically invalidates if you change corporations)
+- **Encrypted backups**: export characters, refresh tokens, and local settings into a password-protected backup zip and import it later
 - **Fully local storage**: all data lives in your browser's IndexedDB; no SkillQ account or server-side database required
 - **Dark / light / system theme**: choose your preferred colour scheme from Settings
 - **Restricted or fluid layout**: fixed three-column card layout or fluid full-width mode
+
+---
 
 ### Shares
 
@@ -34,6 +37,31 @@ SkillQ can generate a snapshot link from a character overview page.
 > - **Expiry**: shares expire after 30 days.
 > - **Corporation binding**: shares invalidate if the character changes corporations.
 > - **Tampering warning**: URL data can be edited by a user, so treat shared data as informational.
+
+---
+
+### Encrypted Backups
+
+SkillQ can export your local browser state to an encrypted backup zip from **Settings**.
+
+What is included:
+
+- Logged-in characters and their refresh tokens
+- Active character selection
+- SkillQ settings (theme, layout, manage/group/order settings)
+- SkillQ local UI state stored under `skillq:` localStorage keys
+
+How it works:
+
+- You choose a backup password during export
+- Backup payload is encrypted in-browser before download
+- Import decrypts in-browser using your password and restores data locally
+
+Important backup caveats:
+
+- If you lose the backup password, the backup cannot be recovered
+- Import currently **merges** backup data into your current local SkillQ data
+- A wrong password or tampered backup will fail safely during import
 
 ---
 
