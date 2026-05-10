@@ -29,6 +29,13 @@ const LAYOUT_MODE_KEY = '__ui:layout-mode';
 const THEME_MODE_KEY = '__ui:theme-mode';
 const MANAGE_SETTINGS_KEY = '__ui:manage-settings';
 const SKILL_ENABLES_INDEX_KEY = '__ui:skill-enables-index';
+const BACKUP_KIND = 'skillq-backup';
+const BACKUP_VERSION = 1;
+const BACKUP_ZIP_ENTRY_NAME = 'skillq-backup.enc.json';
+const BACKUP_FILENAME_PREFIX = 'skillq-backup';
+const SIMPLEESI_GLOBAL_WHOAMI_PREFIX = 'simpleesi-global-whoami-';
+const SIMPLEESI_CHAR_KEY_PREFIX = 'simpleesi-';
+const SIMPLEESI_AUTHED_SUFFIX = '-authed_json';
 const SHARE_URL_VERSION = 1;
 const SHARE_LINK_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 let githubhash = "";
@@ -1680,6 +1687,34 @@ async function renderAccountPage() {
 	actions.appendChild(submit);
 	form.appendChild(actions);
 
+	const backupPanel = document.createElement('div');
+	backupPanel.className = 'sq-account__actions';
+
+	const exportBtn = document.createElement('button');
+	exportBtn.type = 'button';
+	exportBtn.className = 'sq-btn sq-btn--info';
+	exportBtn.textContent = 'Export Encrypted Backup';
+	backupPanel.appendChild(exportBtn);
+
+	const importBtn = document.createElement('button');
+	importBtn.type = 'button';
+	importBtn.className = 'sq-btn sq-btn--ghost';
+	importBtn.textContent = 'Import Encrypted Backup';
+	backupPanel.appendChild(importBtn);
+
+	const importInput = document.createElement('input');
+	importInput.type = 'file';
+	importInput.accept = '.zip,application/zip';
+	importInput.className = 'd-none';
+	backupPanel.appendChild(importInput);
+
+	const backupNote = document.createElement('p');
+	backupNote.className = 'sq-muted';
+	backupNote.textContent = 'Exports include characters, refresh tokens, and local SkillQ settings in an encrypted zip file.';
+	backupPanel.appendChild(backupNote);
+
+	form.appendChild(backupPanel);
+
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
 		const fluid = String(form.elements.fluid?.value || 'no');
@@ -1690,6 +1725,39 @@ async function renderAccountPage() {
 		await lookupCacheSet(LAYOUT_MODE_KEY, { mode: nextMode });
 		await lookupCacheSet(THEME_MODE_KEY, { mode: themeMode });
 		await renderAccountPage();
+	});
+
+	exportBtn.addEventListener('click', async () => {
+		exportBtn.disabled = true;
+		try {
+			await exportEncryptedSkillqBackup();
+			window.alert('Encrypted backup exported.');
+		} catch (err) {
+			window.alert(`Backup export failed: ${err?.message || err}`);
+		} finally {
+			exportBtn.disabled = false;
+		}
+	});
+
+	importBtn.addEventListener('click', () => {
+		importInput.value = '';
+		importInput.click();
+	});
+
+	importInput.addEventListener('change', async () => {
+		const selected = importInput.files?.[0] || null;
+		if (!selected) return;
+		importBtn.disabled = true;
+		try {
+			await importEncryptedSkillqBackup(selected);
+			window.alert('Encrypted backup imported.');
+			await renderAccountPage();
+		} catch (err) {
+			window.alert(`Backup import failed: ${err?.message || err}`);
+		} finally {
+			importBtn.disabled = false;
+			importInput.value = '';
+		}
 	});
 
 	container.appendChild(form);
@@ -2357,6 +2425,377 @@ async function removeCharacterFromManageSettings(characterId) {
 	delete settings.customOrderByCharacterId[charId];
 	delete settings.groupedByCharacterId[charId];
 	await lookupCacheSet(MANAGE_SETTINGS_KEY, normalizeManageSettings(settings));
+}
+
+function dateStampForFileName(value = Date.now()) {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return String(value);
+	}
+	const yyyy = String(date.getUTCFullYear());
+	const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+	const dd = String(date.getUTCDate()).padStart(2, '0');
+	const hh = String(date.getUTCHours()).padStart(2, '0');
+	const mi = String(date.getUTCMinutes()).padStart(2, '0');
+	const ss = String(date.getUTCSeconds()).padStart(2, '0');
+	return `${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
+}
+
+function bytesToBase64(bytes) {
+	let binary = '';
+	for (let i = 0; i < bytes.length; i += 1) {
+		binary += String.fromCharCode(bytes[i]);
+	}
+	return btoa(binary);
+}
+
+function base64ToBytes(value) {
+	const binary = atob(String(value || ''));
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i += 1) {
+		bytes[i] = binary.charCodeAt(i);
+	}
+	return bytes;
+}
+
+async function deriveBackupAesKey(password, saltBytes) {
+	const encoder = new TextEncoder();
+	const baseKey = await crypto.subtle.importKey(
+		'raw',
+		encoder.encode(password),
+		'PBKDF2',
+		false,
+		['deriveKey']
+	);
+
+	return await crypto.subtle.deriveKey({
+		name: 'PBKDF2',
+		salt: saltBytes,
+		iterations: 250000,
+		hash: 'SHA-256'
+	}, baseKey, {
+		name: 'AES-GCM',
+		length: 256
+	}, false, ['encrypt', 'decrypt']);
+}
+
+async function encryptBackupPayload(payload, password) {
+	if (!password || String(password).trim().length < 8) {
+		throw new Error('Backup password must be at least 8 characters.');
+	}
+
+	const encoder = new TextEncoder();
+	const plaintext = encoder.encode(JSON.stringify(payload));
+	const salt = crypto.getRandomValues(new Uint8Array(16));
+	const iv = crypto.getRandomValues(new Uint8Array(12));
+	const key = await deriveBackupAesKey(password, salt);
+	const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+
+	return {
+		kind: BACKUP_KIND,
+		version: BACKUP_VERSION,
+		kdf: 'PBKDF2-SHA256',
+		iterations: 250000,
+		cipher: 'AES-GCM-256',
+		salt: bytesToBase64(salt),
+		iv: bytesToBase64(iv),
+		ciphertext: bytesToBase64(new Uint8Array(encrypted))
+	};
+}
+
+async function decryptBackupPayload(envelope, password) {
+	if (!envelope || envelope.kind !== BACKUP_KIND || Number(envelope.version) !== BACKUP_VERSION) {
+		throw new Error('Invalid backup format.');
+	}
+	if (!password) {
+		throw new Error('Backup password is required.');
+	}
+
+	const salt = base64ToBytes(envelope.salt);
+	const iv = base64ToBytes(envelope.iv);
+	const ciphertext = base64ToBytes(envelope.ciphertext);
+	const key = await deriveBackupAesKey(password, salt);
+	const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+	const decoder = new TextDecoder();
+
+	return JSON.parse(decoder.decode(decrypted));
+}
+
+function collectSkillqLocalStorageEntries() {
+	const entries = {};
+	try {
+		for (let index = 0; index < window.localStorage.length; index += 1) {
+			const key = window.localStorage.key(index);
+			if (!key || !key.startsWith('skillq:')) continue;
+			entries[key] = window.localStorage.getItem(key);
+		}
+	} catch (_) {
+		// Ignore localStorage read failures.
+	}
+	return entries;
+}
+
+async function collectSkillqBackupPayload() {
+	const rows = await window.esi.store.table.toArray();
+	const globalWhoamiRaw = await window.esi.store.get('simpleesi-global-whoami');
+	const loggedInCharacters = await window.esi.getLoggedInCharacters();
+	const charactersById = new Map();
+
+	for (const char of loggedInCharacters) {
+		const charId = String(char?.character_id || '');
+		if (!charId) continue;
+
+		let whoami = null;
+		const whoamiRaw = await window.esi.store.get(`${SIMPLEESI_GLOBAL_WHOAMI_PREFIX}${charId}`);
+		if (whoamiRaw) {
+			try {
+				whoami = JSON.parse(whoamiRaw);
+			} catch (_) {
+				whoami = null;
+			}
+		}
+
+		if (!whoami && String(window.esi?.whoami?.character_id || '') === charId) {
+			whoami = window.esi.whoami;
+		}
+
+		let authed = null;
+		try {
+			authed = await window.esi.lsGet('authed_json', charId);
+		} catch (_) {
+			authed = null;
+		}
+
+		// Back-compat: older installs may only have the current character auth at global scope.
+		if (!authed && String(window.esi?.whoami?.character_id || '') === charId) {
+			try {
+				authed = await window.esi.lsGet('authed_json', true);
+			} catch (_) {
+				authed = null;
+			}
+		}
+
+		const refreshToken = String(authed?.refresh_token || '');
+		if (!refreshToken) continue;
+
+		charactersById.set(charId, {
+			character_id: charId,
+			whoami: whoami || {
+				character_id: charId,
+				name: String(char?.name || `Character ${charId}`)
+			},
+			refresh_token: refreshToken
+		});
+	}
+
+	// Last fallback: scan raw rows to recover any character tokens not surfaced by getLoggedInCharacters.
+	for (const row of rows) {
+		const key = String(row?.key || '');
+		if (!key || !key.startsWith(SIMPLEESI_CHAR_KEY_PREFIX) || !key.endsWith(SIMPLEESI_AUTHED_SUFFIX)) continue;
+		const charId = key.slice(SIMPLEESI_CHAR_KEY_PREFIX.length, key.length - SIMPLEESI_AUTHED_SUFFIX.length);
+		if (!charId || charId === 'global' || charactersById.has(charId)) continue;
+
+		let authed = null;
+		try {
+			authed = JSON.parse(row.value);
+		} catch (_) {
+			authed = null;
+		}
+		const refreshToken = String(authed?.refresh_token || '');
+		if (!refreshToken) continue;
+
+		let whoami = null;
+		const whoamiRaw = await window.esi.store.get(`${SIMPLEESI_GLOBAL_WHOAMI_PREFIX}${charId}`);
+		if (whoamiRaw) {
+			try {
+				whoami = JSON.parse(whoamiRaw);
+			} catch (_) {
+				whoami = null;
+			}
+		}
+
+		charactersById.set(charId, {
+			character_id: charId,
+			whoami: whoami || {
+				character_id: charId,
+				name: `Character ${charId}`
+			},
+			refresh_token: refreshToken
+		});
+	}
+
+	const characters = Array.from(charactersById.values())
+		.sort((left, right) => String(left.whoami?.name || '').localeCompare(String(right.whoami?.name || '')));
+
+	let activeCharacterId = null;
+	if (globalWhoamiRaw) {
+		try {
+			activeCharacterId = String(JSON.parse(globalWhoamiRaw)?.character_id || '');
+		} catch (_) {
+			activeCharacterId = null;
+		}
+	}
+	if (!activeCharacterId) {
+		activeCharacterId = String(window.esi?.whoami?.character_id || '');
+	}
+
+	const [layoutModeSetting, themeModeSetting, manageSetting, skillEnablesIndexSetting] = await Promise.all([
+		lookupCacheGet(LAYOUT_MODE_KEY),
+		lookupCacheGet(THEME_MODE_KEY),
+		lookupCacheGet(MANAGE_SETTINGS_KEY),
+		lookupCacheGet(SKILL_ENABLES_INDEX_KEY)
+	]);
+
+	return {
+		kind: BACKUP_KIND,
+		version: BACKUP_VERSION,
+		exportedAt: new Date().toISOString(),
+		characters,
+		activeCharacterId,
+		settings: {
+			layoutMode: layoutModeSetting?.mode || layoutMode,
+			themeMode: themeModeSetting?.mode || themeMode,
+			manage: normalizeManageSettings(manageSetting),
+			skillEnablesIndex: skillEnablesIndexSetting || null,
+			localStorageSkillq: collectSkillqLocalStorageEntries()
+		}
+	};
+}
+
+async function writeImportedBackupPayload(payload) {
+	if (!payload || payload.kind !== BACKUP_KIND || Number(payload.version) !== BACKUP_VERSION) {
+		throw new Error('Backup data is not recognized.');
+	}
+
+	const characters = Array.isArray(payload.characters) ? payload.characters : [];
+	if (characters.length === 0) {
+		throw new Error('Backup has no characters to import.');
+	}
+
+	for (const entry of characters) {
+		const characterId = String(entry?.character_id || '');
+		const whoami = entry?.whoami;
+		const refreshToken = String(entry?.refresh_token || '');
+		if (!characterId || !whoami || !refreshToken) continue;
+
+		await window.esi.store.set(`simpleesi-global-whoami-${characterId}`, JSON.stringify(whoami));
+		await window.esi.store.set(`simpleesi-${characterId}-authed_json`, JSON.stringify({
+			refresh_token: refreshToken,
+			token_type: 'Bearer'
+		}));
+		await window.esi.store.delete(`simpleesi-${characterId}-access_token`);
+	}
+
+	const preferredCharacterId = String(payload.activeCharacterId || characters[0]?.character_id || '');
+	const preferred = characters.find((entry) => String(entry?.character_id || '') === preferredCharacterId) || characters[0];
+	if (preferred?.whoami) {
+		await window.esi.store.set('simpleesi-global-whoami', JSON.stringify(preferred.whoami));
+		window.esi.whoami = preferred.whoami;
+	}
+	await window.esi.store.delete('simpleesi-global-loggedout');
+
+	const settings = payload.settings || {};
+	await lookupCacheSet(LAYOUT_MODE_KEY, { mode: String(settings.layoutMode || 'restricted') });
+	await lookupCacheSet(THEME_MODE_KEY, { mode: String(settings.themeMode || 'dark') });
+	await lookupCacheSet(MANAGE_SETTINGS_KEY, normalizeManageSettings(settings.manage));
+	if (settings.skillEnablesIndex != null) {
+		await lookupCacheSet(SKILL_ENABLES_INDEX_KEY, settings.skillEnablesIndex);
+	}
+
+	try {
+		const localEntries = settings.localStorageSkillq && typeof settings.localStorageSkillq === 'object'
+			? settings.localStorageSkillq
+			: {};
+		for (const [key, value] of Object.entries(localEntries)) {
+			if (key.startsWith('skillq:')) {
+				window.localStorage.setItem(key, value == null ? '' : String(value));
+			}
+		}
+	} catch (_) {
+		// Ignore localStorage write failures.
+	}
+}
+
+async function exportEncryptedSkillqBackup() {
+	if (!window.fflate || typeof window.fflate.zipSync !== 'function') {
+		throw new Error('Zip support is unavailable.');
+	}
+	if (!window.crypto?.subtle) {
+		throw new Error('Web Crypto support is unavailable in this browser context.');
+	}
+
+	const payload = await collectSkillqBackupPayload();
+	if (!Array.isArray(payload.characters) || payload.characters.length === 0) {
+		throw new Error('No characters with refresh tokens found to export.');
+	}
+
+	const password = window.prompt('Enter a password for this backup (minimum 8 characters):', '');
+	if (password == null) return;
+	const confirmPassword = window.prompt('Confirm backup password:', '');
+	if (confirmPassword == null) return;
+	if (password !== confirmPassword) {
+		throw new Error('Passwords did not match.');
+	}
+
+	const encryptedEnvelope = await encryptBackupPayload(payload, password);
+	const entryBytes = new TextEncoder().encode(JSON.stringify(encryptedEnvelope));
+	const zipBytes = window.fflate.zipSync({
+		[BACKUP_ZIP_ENTRY_NAME]: entryBytes
+	});
+
+	const blob = new Blob([zipBytes], { type: 'application/zip' });
+	const fileName = `${BACKUP_FILENAME_PREFIX}-${dateStampForFileName()}.zip`;
+	const url = URL.createObjectURL(blob);
+	const anchor = document.createElement('a');
+	anchor.href = url;
+	anchor.download = fileName;
+	document.body.appendChild(anchor);
+	anchor.click();
+	anchor.remove();
+	URL.revokeObjectURL(url);
+}
+
+async function importEncryptedSkillqBackup(file) {
+	if (!window.fflate || typeof window.fflate.unzipSync !== 'function') {
+		throw new Error('Zip support is unavailable.');
+	}
+	if (!window.crypto?.subtle) {
+		throw new Error('Web Crypto support is unavailable in this browser context.');
+	}
+	if (!file) {
+		throw new Error('No backup file selected.');
+	}
+
+	const confirmed = window.confirm('Importing will merge characters/settings from backup into this browser. Continue?');
+	if (!confirmed) return;
+
+	const password = window.prompt('Enter the backup password:', '');
+	if (password == null) return;
+
+	const buffer = await file.arrayBuffer();
+	const archive = window.fflate.unzipSync(new Uint8Array(buffer));
+	const encryptedEntry = archive[BACKUP_ZIP_ENTRY_NAME];
+	if (!encryptedEntry) {
+		throw new Error(`Backup is missing ${BACKUP_ZIP_ENTRY_NAME}.`);
+	}
+
+	let envelope;
+	try {
+		envelope = JSON.parse(new TextDecoder().decode(encryptedEntry));
+	} catch (_) {
+		throw new Error('Backup payload is not valid JSON.');
+	}
+
+	let payload;
+	try {
+		payload = await decryptBackupPayload(envelope, password);
+	} catch (_) {
+		throw new Error('Failed to decrypt backup. Check password and file.');
+	}
+
+	await writeImportedBackupPayload(payload);
+	applyLayoutMode(String(payload?.settings?.layoutMode || layoutMode));
+	applyThemeMode(String(payload?.settings?.themeMode || themeMode));
 }
 
 async function getOrderedCharactersForNavbar(characters) {
