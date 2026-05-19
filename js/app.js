@@ -29,6 +29,11 @@ const LAYOUT_MODE_KEY = '__ui:layout-mode';
 const THEME_MODE_KEY = '__ui:theme-mode';
 const MANAGE_SETTINGS_KEY = '__ui:manage-settings';
 const SKILL_ENABLES_INDEX_KEY = '__ui:skill-enables-index';
+const PERSISTENT_LOOKUP_KEYS = new Set([
+	LAYOUT_MODE_KEY,
+	THEME_MODE_KEY,
+	MANAGE_SETTINGS_KEY
+]);
 const BACKUP_KIND = 'skillq-backup';
 const BACKUP_VERSION = 1;
 const BACKUP_ZIP_ENTRY_NAME = 'skillq-backup.enc.json';
@@ -38,8 +43,8 @@ const SIMPLEESI_CHAR_KEY_PREFIX = 'simpleesi-';
 const SIMPLEESI_AUTHED_SUFFIX = '-authed_json';
 const SHARE_URL_VERSION = 1;
 const SHARE_LINK_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
-let githubhash = "9604a15";
-const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '9604a15';
+let githubhash = "b10ac9b";
+const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : 'b10ac9b';
 let layoutMode = 'restricted';
 let themeMode = 'dark';
 
@@ -1195,6 +1200,14 @@ async function renderLoggedInHome() {
 
 	const summaries = await loadCharacterSummariesFromCache(characters);
 	const orderedSummaries = orderCharacterSummaries(summaries, manageSettings);
+	const distinctGroupCount = new Set(
+		orderedSummaries.map((summary) => {
+			const characterId = String(summary.character.character_id);
+			const groupLabel = String(manageSettings.groupedByCharacterId?.[characterId] || '').trim();
+			return groupLabel.length > 0 ? `group:${groupLabel}` : '__ungrouped__';
+		})
+	).size;
+	const showGroupRule = distinctGroupCount > 1;
 	const orderedCharacters = orderedSummaries.map((summary) => ({
 		character_id: String(summary.character.character_id),
 		name: summary.character.name
@@ -1210,15 +1223,14 @@ async function renderLoggedInHome() {
 	});
 	bindLayoutToggle();
 
-	let previousGroup = null;
+	let previousGroupKey = null;
 	for (const summary of orderedSummaries) {
 		const characterId = String(summary.character.character_id);
 		const groupLabel = String(manageSettings.groupedByCharacterId?.[characterId] || '').trim();
-		if (groupLabel !== previousGroup) {
-			if (groupLabel.length > 0) {
-				cardsRoot.appendChild(renderHomeGroupHeader(groupLabel));
-			}
-			previousGroup = groupLabel;
+		const groupKey = groupLabel.length > 0 ? `group:${groupLabel}` : '__ungrouped__';
+		if (groupKey !== previousGroupKey) {
+			cardsRoot.appendChild(renderHomeGroupHeader(groupLabel, { showRule: showGroupRule }));
+			previousGroupKey = groupKey;
 		}
 		cardsRoot.appendChild(renderCharCard({
 			character: summary.character,
@@ -2343,7 +2355,7 @@ function orderCharacterSummaries(summaries, settings) {
 	return sorted;
 }
 
-function renderHomeGroupHeader(groupLabel) {
+function renderHomeGroupHeader(groupLabel, { showRule = true } = {}) {
 	const wrapper = document.createElement('div');
 	wrapper.className = 'sq-char-group';
 
@@ -2352,9 +2364,11 @@ function renderHomeGroupHeader(groupLabel) {
 	heading.textContent = groupLabel;
 	wrapper.appendChild(heading);
 
-	const rule = document.createElement('hr');
-	rule.className = 'sq-char-group__rule';
-	wrapper.appendChild(rule);
+	if (showRule) {
+		const rule = document.createElement('hr');
+		rule.className = 'sq-char-group__rule';
+		wrapper.appendChild(rule);
+	}
 
 	return wrapper;
 }
@@ -2381,7 +2395,11 @@ function compareByOrder(a, b, orderBy, customMap) {
 
 async function getManageSettings() {
 	const saved = await lookupCacheGet(MANAGE_SETTINGS_KEY);
-	return normalizeManageSettings(saved);
+	const normalized = normalizeManageSettings(saved);
+	if (saved != null) {
+		await lookupCacheSet(MANAGE_SETTINGS_KEY, normalized, null);
+	}
+	return normalized;
 }
 
 function normalizeManageSettings(settings) {
@@ -3773,9 +3791,12 @@ async function lookupCacheGet(key) {
 	}
 }
 
-async function lookupCacheSet(key, value) {
+async function lookupCacheSet(key, value, ttl = undefined) {
 	try {
-		await lookupStore.set(key, value, LOOKUP_TTL_MS);
+		const effectiveTtl = ttl === undefined
+			? (PERSISTENT_LOOKUP_KEYS.has(key) ? null : LOOKUP_TTL_MS)
+			: ttl;
+		await lookupStore.set(key, value, effectiveTtl);
 	} catch (_) {
 		// Ignore cache write failures.
 	}

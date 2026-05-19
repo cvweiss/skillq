@@ -71,7 +71,9 @@ class DexieStore {
 	}
 
 	async clearExpired() {
-		return await this.table.where('expiresAt').below(Date.now()).delete();
+		// Only remove records with a numeric expiration timestamp.
+		// Non-expiring records use null and must be retained.
+		return await this.table.where('expiresAt').between(0, Date.now(), true, true).delete();
 	}
 
 	async destroyDB() {
