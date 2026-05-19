@@ -456,6 +456,7 @@ vertical-align: top;
 .sq-pip--queued   { background: var(--pip-queued);   border-color: var(--pip-queued); }
 .sq-skill-pip-cell { width: 70px; white-space: nowrap; }
 .sq-skill-sp { font-size: 0.75em; color: var(--muted); margin-left: 0.3em; }
+.sq-skill-sp-remaining { font-size: 0.72em; color: var(--muted); margin-left: 0.2em; font-weight: 400; }
 .sq-queue-sp-needed {
 	font-size: 0.72em;
 	color: var(--muted);

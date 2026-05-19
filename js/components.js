@@ -483,14 +483,21 @@ function renderCharSkills({ queue = [], skills = [], totalSP = 0, unallocatedSP 
 				tr.hidden = true;
 
 				const nameTd = document.createElement('td');
-				const link = _a(`/item/${skill.typeID}/`, skill.typeName);
+				const link = _a(`/item/${skill.typeID}/`, `${skill.typeName} ${toRomanNumeral(skill.level)}`);
 				nameTd.appendChild(link);
-				const targetLevel = skill.training || skill.queue || 0;
-				if (targetLevel > 0 && targetLevel > skill.level) {
-					nameTd.appendChild(_el('em', 'sq-skill-sp', ` ${toRomanNumeral(targetLevel)}`));
-				}
-				if (skill.skillPoints) {
-					nameTd.appendChild(_el('em', 'sq-skill-sp', ` ${numberFormat(skill.skillPoints, 0)} SP`));
+				// Show skill points: level V shows total only, others show current/total and remaining
+				const currentSp = skill.skillPoints || 0;
+				const totalSp = skill.skillPointsTotal || 0;
+				const remainingSp = skill.skillPointsRemaining || 0;
+				if (totalSp > 0) {
+					if (skill.level === 5) {
+						nameTd.appendChild(_el('em', 'sq-skill-sp', ` ${numberFormat(totalSp, 0)} SP`));
+					} else {
+						nameTd.appendChild(_el('em', 'sq-skill-sp', ` ${numberFormat(currentSp, 0)}/${numberFormat(totalSp, 0)} SP`));
+						if (remainingSp > 0) {
+							nameTd.appendChild(_el('em', 'sq-skill-sp-remaining', ` (${numberFormat(remainingSp, 0)} remaining)`));
+						}
+					}
 				}
 
 				const pipTd = _el('td', 'sq-skill-pip-cell');

@@ -3378,12 +3378,19 @@ async function fetchSkillsOverview(characterId) {
 			const groupInfo = groupInfos.get(typeInfo?.group_id);
 			const activeQueue = queue.find((q) => q.skill_id === row.skill_id);
 			const isCurrentlyTraining = Number(row.skill_id || 0) === activeTrainingSkillId && activeTrainingEndMs > Date.now();
+			const skillPointsCurrent = Number(row.skillpoints_in_skill || 0);
+			const dogma = new Map((typeInfo?.dogma_attributes || []).map((attr) => [attr.attribute_id, attr.value]));
+			const skillRank = Number(dogma.get(275) || 1);
+			const skillPointsTotal = getSkillPointsForLevel(5, skillRank);
 			return {
 				typeName: typeInfo?.name || `Skill ${row.skill_id}`,
 				typeID: row.skill_id,
 				groupName: groupInfo?.name || '',
 				groupID: typeInfo?.group_id || 0,
-				skillPoints: Number(row.skillpoints_in_skill || 0),
+				skillPoints: skillPointsCurrent,
+				skillPointsTotal: skillPointsTotal,
+				skillPointsRemaining: Math.max(0, skillPointsTotal - skillPointsCurrent),
+				skillRank: skillRank,
 				level: Number(row.trained_skill_level ?? row.active_skill_level ?? 0),
 				training: activeQueue ? Number(activeQueue.finished_level || 0) : 0,
 				queue: maxQueuedLevels.get(row.skill_id) || 0,
