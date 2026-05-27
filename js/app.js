@@ -43,8 +43,8 @@ const SIMPLEESI_CHAR_KEY_PREFIX = 'simpleesi-';
 const SIMPLEESI_AUTHED_SUFFIX = '-authed_json';
 const SHARE_URL_VERSION = 1;
 const SHARE_LINK_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
-let githubhash = "b1c4c5b";
-const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : 'b1c4c5b';
+let githubhash = "c354fd0";
+const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : 'c354fd0';
 let layoutMode = 'restricted';
 let themeMode = 'dark';
 
