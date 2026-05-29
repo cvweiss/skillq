@@ -1,7 +1,7 @@
 let routerInitialized = false;
 const ESI_BASE = 'https://esi.evetech.net';
 const LOOKUP_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const CHARACTER_DATA_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
+const CHARACTER_DATA_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const CHARACTER_DATA_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const BACKGROUND_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 const BACKGROUND_REFRESH_JOB_INTERVAL_MS = 3 * 1000;
@@ -52,6 +52,14 @@ function withStaticCacheHash(path) {
 	const cacheValue = githubhash || staticCacheHash;
 	const separator = path.includes('?') ? '&' : '?';
 	return `${path}${separator}v=${encodeURIComponent(cacheValue)}`;
+}
+
+async function fetchLatestCharacterJson(url, method = 'GET', headers = null, body = null) {
+	return await window.esi.doJsonRequest(url, method, headers, body, { bypassCache: true });
+}
+
+async function fetchLatestCharacterAuthJson(url, characterId, method = 'GET', headers = null, body = null) {
+	return await window.esi.doJsonAuthRequest(url, method, headers, body, characterId, { bypassCache: true });
 }
 
 document.addEventListener('DOMContentLoaded', doBtnBinds);
@@ -2330,6 +2338,14 @@ async function clearCharacterLocalData(characterId) {
 	for (const key of keys) {
 		await characterDataStore.delete(key);
 	}
+
+	if (window.esi?.store?.table) {
+		await Promise.all([
+			window.esi.store.table.where('key').startsWith(`simpleesi-global-whoami-${charId}`).delete(),
+			window.esi.store.table.where('key').startsWith(`simpleesi-${charId}-`).delete(),
+			window.esi.store.table.where('key').startsWith(`simpleesi-global-esi-cache-${ESI_BASE}/characters/${charId}`).delete()
+		]);
+	}
 }
 
 function orderCharacterSummaries(summaries, settings) {
@@ -2975,12 +2991,12 @@ async function refreshCharacterSummaryInBackground(characterId, characterName) {
 	console.log('Refreshing background summary for', characterName);
 	try {
 		const [balance, skills, queue, attr, implants, char] = await Promise.all([
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/wallet`, 'GET', null, null, characterId),
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/skills`, 'GET', null, null, characterId),
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/skillqueue`, 'GET', null, null, characterId),
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/attributes`, 'GET', null, null, characterId),
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/implants`, 'GET', null, null, characterId),
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}`, 'GET', null, null)
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/wallet`, characterId),
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skills`, characterId),
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skillqueue`, characterId),
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/attributes`, characterId),
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/implants`, characterId),
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}`, characterId)
 		]);
 		const corporationId = char?.corporation_id ? String(char.corporation_id) : null;
 		const allianceId = char?.alliance_id ? String(char.alliance_id) : null;
@@ -3255,14 +3271,14 @@ async function shouldRefreshCharacterData(key) {
 async function fetchCharacterCommonData(characterId) {
 	try {
 		const [charInfo, balance, queue, history] = await Promise.all([
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}`, 'GET', null, null, characterId),
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/wallet`, 'GET', null, null, characterId),
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}`, characterId),
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/wallet`, characterId),
 			fallbackUnlessCharacterRefreshTokenError(
-				window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/skillqueue`, 'GET', null, null, characterId),
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skillqueue`, characterId),
 				[],
 				characterId
 			),
-			window.esi.doJsonRequest(`${ESI_BASE}/characters/${characterId}/corporationhistory`).catch(() => [])
+			fetchLatestCharacterJson(`${ESI_BASE}/characters/${characterId}/corporationhistory`).catch(() => [])
 		]);
 
 		const [corporation, alliance] = await Promise.all([
@@ -3318,9 +3334,9 @@ async function fetchCharacterCommonData(characterId) {
 async function fetchSkillsOverview(characterId) {
 	try {
 		const [skillsResponse, queueResponse] = await Promise.all([
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/skills`, 'GET', null, null, characterId),
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skills`, characterId),
 			fallbackUnlessCharacterRefreshTokenError(
-				window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/skillqueue`, 'GET', null, null, characterId),
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skillqueue`, characterId),
 				[],
 				characterId
 			)
@@ -3488,7 +3504,7 @@ function applyOverviewTrainingToCommonData(data, queueRows) {
 async function fetchWalletRows(characterId) {
 	try {
 		const rows = await fallbackUnlessCharacterRefreshTokenError(
-			window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/wallet/journal?page=1`, 'GET', null, null, characterId),
+			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/wallet/journal?page=1`, characterId),
 			[],
 			characterId
 		);
@@ -3522,17 +3538,17 @@ async function fetchTrainingSuggestions(characterId) {
 	try {
 		const [attributes, implants, skillsResponse] = await Promise.all([
 			fallbackUnlessCharacterRefreshTokenError(
-				window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/attributes`, 'GET', null, null, characterId),
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/attributes`, characterId),
 				null,
 				characterId
 			),
 			fallbackUnlessCharacterRefreshTokenError(
-				window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/implants`, 'GET', null, null, characterId),
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/implants`, characterId),
 				[],
 				characterId
 			),
 			fallbackUnlessCharacterRefreshTokenError(
-				window.esi.doJsonAuthRequest(`${ESI_BASE}/characters/${characterId}/skills`, 'GET', null, null, characterId),
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skills`, characterId),
 				({ skills: [] }),
 				characterId
 			)

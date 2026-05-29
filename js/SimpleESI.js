@@ -189,6 +189,10 @@ class SimpleESI {
 			this.whoami = this.parseJwtPayload(json.access_token);
 			this.whoami.character_id = this.whoami.sub.replace('CHARACTER:EVE:', '');
 
+			if (typeof window.clearCharacterLocalData === 'function') {
+				await window.clearCharacterLocalData(this.whoami.character_id);
+			}
+
 			await this.store.set('simpleesi-global-whoami', JSON.stringify(this.whoami));
 			await this.store.set(`simpleesi-global-whoami-${this.whoami.character_id}`, JSON.stringify(this.whoami));
 			await this.lsSet('whoami', this.whoami);
@@ -316,32 +320,33 @@ class SimpleESI {
 		await this.store.delete('simpleesi-global-loggedout');
 	}
 
-	async doJsonAuthRequest(url, method = 'GET', headers = null, body = null, character_id = this.whoami?.character_id) {
-		let res = await this.doAuthRequest(url, method, headers, body, character_id);
+	async doJsonAuthRequest(url, method = 'GET', headers = null, body = null, character_id = this.whoami?.character_id, options = {}) {
+		let res = await this.doAuthRequest(url, method, headers, body, character_id, options);
 		if (!res || !res.ok) {
 			throw new Error(`Request failed with status ${res?.status}`);
 		}
 		return await res.json();
 	}
 
-	async doAuthRequest(url, method = 'GET', headers = null, body = null, character_id = this.whoami?.character_id) {
+	async doAuthRequest(url, method = 'GET', headers = null, body = null, character_id = this.whoami?.character_id, options = {}) {
 		if (headers === null) headers = {};
 		const accessToken = await this.getAccessToken(character_id);
 		headers.Authorization = accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`;
 		headers.Accept = 'application/json';
-		return await this.doRequest(url, method, headers, body);
+		return await this.doRequest(url, method, headers, body, options);
 	}
 
-	async doJsonRequest(url, method = 'GET', headers = null, body = null) {
-		let res = await this.doRequest(url, method, headers, body);
+	async doJsonRequest(url, method = 'GET', headers = null, body = null, options = {}) {
+		let res = await this.doRequest(url, method, headers, body, options);
 		if (!res || !res.ok) {
 			throw new Error(`Request failed with status ${res?.status}`);
 		}
 		return await res.json();
 	}
 
-	async doRequest(url, method = 'GET', headers = null, body = null) {
+	async doRequest(url, method = 'GET', headers = null, body = null, options = {}) {
 		const lockKey = `request_lock_${method}_${url}`;
+		const bypassCache = Boolean(options?.bypassCache);
 		try {
 			while (this._locks[lockKey]) {
 				await new Promise(resolve => setTimeout(resolve, 100));
@@ -368,7 +373,7 @@ class SimpleESI {
 				const minute = now.getUTCHours() * 100 + now.getUTCMinutes();
 				useCache |= (minute >= 1059 && minute <= 1110);
 
-				if (useCache) {
+				if (useCache && !bypassCache) {
 					return new Response(JSON.stringify(cachedData.data), {
 						status: 200,
 						statusText: 'OK (Cached)',
