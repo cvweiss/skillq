@@ -66,6 +66,18 @@ function _boosterBadge(text = 'Booster') {
 	return badge;
 }
 
+function _appendTrainingLabel(container, typeName, level) {
+	const nameText = String(typeName || '').trim();
+	const levelText = Number(level || 0) > 0 ? toRomanNumeral(level) : '';
+
+	const nameSpan = _el('span', 'sq-training-name', nameText);
+	container.appendChild(nameSpan);
+
+	if (levelText) {
+		container.appendChild(_el('span', 'sq-training-level', levelText));
+	}
+}
+
 function _skillPips(level, training = 0, queued = 0) {
 	const span = _el('span', 'sq-skill-pips');
 	span.setAttribute('aria-label', `Level ${level}`);
@@ -210,7 +222,7 @@ function renderCharCard({ character, training = null } = {}) {
 
 	if (training?.typeName) {
 		const trainDiv = _el('div', 'sq-char-card__training');
-		trainDiv.textContent = training.typeName + (training.level ? ` ${toRomanNumeral(training.level)}` : '');
+		_appendTrainingLabel(trainDiv, training.typeName, training.level);
 		info.appendChild(trainDiv);
 
 		if (training.trainingEndMs > Date.now()) {
@@ -288,7 +300,8 @@ function renderCharInfo({ character, corporation = null, alliance = null, traini
 	if (showBalance)       details.appendChild(_el('div', 'sq-char-info__balance', `${numberFormat(balance, 2)} ISK`));
 
 	if (training?.typeName) {
-		const trainingEl = _el('div', 'sq-char-info__training', training.typeName + (training.level ? ` ${toRomanNumeral(training.level)}` : ''));
+		const trainingEl = _el('div', 'sq-char-info__training');
+		_appendTrainingLabel(trainingEl, training.typeName, training.level);
 		details.appendChild(trainingEl);
 		if (training.trainingEndMs > Date.now()) {
 			const countdown = _el('span', 'sq-countdown');

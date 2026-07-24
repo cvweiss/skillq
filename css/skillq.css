@@ -683,7 +683,7 @@ body.sq-layout-restricted .sq-char-card {
 }
 .sq-char-card__portrait-link { flex-shrink: 0; }
 .sq-char-card__portrait { width: 128px; height: 128px; display: block; }
-.sq-char-card__info { display: flex; flex-direction: column; gap: 0.15rem; padding-top: 0.1rem; }
+.sq-char-card__info { display: flex; flex-direction: column; gap: 0.15rem; padding-top: 0.1rem; min-width: 0; flex: 1 1 auto; }
 .sq-char-card__info strong a { color: var(--accent); text-decoration: none; font-size: 0.95rem; font-weight: bold; }
 .sq-char-card__info strong a:hover { color: var(--accent-hover); text-decoration: underline; }
 .sq-char-card__stat { font-size: 0.85rem; color: var(--fg); }
@@ -1020,6 +1020,28 @@ body.sq-layout-restricted .sq-char-card {
 }
 .sq-char-info__booster {
 	margin-top: -0.1rem;
+}
+
+.sq-char-card__training,
+.sq-char-info__training {
+	display: flex;
+	align-items: baseline;
+	gap: 0.3rem;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.sq-training-name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	flex: 0 1 auto;
+}
+
+.sq-training-level {
+	white-space: nowrap;
+	flex: 0 0 auto;
 }
 
 /* ═══════════════════════════════════════════════════════════════
