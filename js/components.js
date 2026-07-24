@@ -60,6 +60,12 @@ function _a(href, text, className) {
 	return a;
 }
 
+function _boosterBadge(text = 'Booster') {
+	const badge = _el('span', 'sq-badge sq-badge--booster', text);
+	badge.title = 'Training speed is above the expected attributes + implant rate.';
+	return badge;
+}
+
 function _skillPips(level, training = 0, queued = 0) {
 	const span = _el('span', 'sq-skill-pips');
 	span.setAttribute('aria-label', `Level ${level}`);
@@ -213,6 +219,12 @@ function renderCharCard({ character, training = null } = {}) {
 			info.appendChild(countdown);
 		}
 
+		if (training.hasTrainingBooster || training.hasCharacterBooster) {
+			const boosterWrap = _el('div', 'sq-char-card__booster');
+			boosterWrap.appendChild(_boosterBadge(training.hasTrainingBooster ? 'Booster' : 'Booster Active'));
+			info.appendChild(boosterWrap);
+		}
+
 		if (training.queueEmptyMs && training.queueEmptyMs - Date.now() < 86400000) {
 			const warn = _el('div', 'sq-warn', 'Queue finishing soon');
 			info.appendChild(warn);
@@ -276,11 +288,17 @@ function renderCharInfo({ character, corporation = null, alliance = null, traini
 	if (showBalance)       details.appendChild(_el('div', 'sq-char-info__balance', `${numberFormat(balance, 2)} ISK`));
 
 	if (training?.typeName) {
-		details.appendChild(_el('div', 'sq-char-info__training', training.typeName + (training.level ? ` ${toRomanNumeral(training.level)}` : '')));
+		const trainingEl = _el('div', 'sq-char-info__training', training.typeName + (training.level ? ` ${toRomanNumeral(training.level)}` : ''));
+		details.appendChild(trainingEl);
 		if (training.trainingEndMs > Date.now()) {
 			const countdown = _el('span', 'sq-countdown');
 			countdown.dataset.until = training.trainingEndMs;
 			details.appendChild(countdown);
+		}
+		if (training.hasTrainingBooster || training.hasCharacterBooster) {
+			const boosterWrap = _el('div', 'sq-char-info__booster');
+			boosterWrap.appendChild(_boosterBadge(training.hasTrainingBooster ? 'Booster' : 'Booster Active'));
+			details.appendChild(boosterWrap);
 		}
 		if (training.queueEmptyMs && training.queueEmptyMs - Date.now() < 86400000) {
 			details.appendChild(_el('div', 'sq-warn', 'Queue finishing soon'));
@@ -388,6 +406,10 @@ function renderCharSkills({ queue = [], skills = [], totalSP = 0, unallocatedSP 
 			skillLink.href = `/item/${skill.typeID}/`;
 			skillLink.textContent = skill.typeName + (queueLevel ? ` ${toRomanNumeral(queueLevel)}` : '');
 			skillTd.appendChild(skillLink);
+			if (skill.hasTrainingBooster) {
+				skillTd.appendChild(_el('span', null, ' '));
+				skillTd.appendChild(_boosterBadge());
+			}
 			const spNeeded = computeQueueSpNeeded(skill);
 			if (spNeeded > 0) {
 				const spNeededSmall = document.createElement('small');

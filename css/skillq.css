@@ -383,6 +383,24 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 .sq-section-title { margin: 1rem 0 0.5rem; font-size: 1rem; }
 .sq-section-title small { font-size: 0.8em; font-weight: 400; color: var(--muted); margin-left: 0.4em; }
 
+.sq-badge {
+	display: inline-block;
+	font-size: 0.66rem;
+	line-height: 1.2;
+	padding: 0.12rem 0.4rem;
+	border-radius: 999px;
+	vertical-align: middle;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	border: 1px solid transparent;
+}
+
+.sq-badge--booster {
+	color: #2f1b00;
+	background: #f6c26a;
+	border-color: #e3a43f;
+}
+
 /* ── Toast ── */
 .sq-toast {
 	position: fixed;
@@ -671,6 +689,7 @@ body.sq-layout-restricted .sq-char-card {
 .sq-char-card__stat { font-size: 0.85rem; color: var(--fg); }
 .sq-char-card__training { font-size: 0.82rem; color: var(--fg); margin-top: 0.1rem; }
 .sq-char-card__countdown { font-size: 0.8rem; color: var(--muted); }
+.sq-char-card__booster { margin-top: 0.05rem; }
 .sq-net-summary {
   background: var(--card);
   border: 1px solid var(--border);
@@ -998,6 +1017,9 @@ body.sq-layout-restricted .sq-char-card {
 .sq-char-info__training {
 	font-size: 0.95rem;
 	font-weight: 500;
+}
+.sq-char-info__booster {
+	margin-top: -0.1rem;
 }
 
 /* ═══════════════════════════════════════════════════════════════

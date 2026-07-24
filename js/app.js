@@ -1395,7 +1395,9 @@ function buildCharacterInfoSignature(data) {
 			typeName: String(data?.training?.typeName || ''),
 			level: Number(data?.training?.level || 0),
 			trainingEndMs: Number(data?.training?.trainingEndMs || 0),
-			queueEmptyMs: Number(data?.training?.queueEmptyMs || 0)
+			queueEmptyMs: Number(data?.training?.queueEmptyMs || 0),
+			hasTrainingBooster: Boolean(data?.training?.hasTrainingBooster),
+			hasCharacterBooster: Boolean(data?.training?.hasCharacterBooster)
 		}
 	});
 }
@@ -2983,8 +2985,10 @@ async function refreshCharacterSummaryInBackground(characterId, characterName) {
 	const cachedSummary = await cacheGetCharacterData(summaryKey);
 	const missingTrainingLevel = Boolean(cachedSummary?.training?.typeName)
 		&& !Number(cachedSummary?.training?.level || 0);
+	const missingCharacterBoosterFlag = Boolean(cachedSummary?.training?.typeName)
+		&& !Object.prototype.hasOwnProperty.call(cachedSummary?.training || {}, 'hasCharacterBooster');
 	const finishedTraining = hasTrainingCompleted(cachedSummary?.training);
-	if (!(await shouldRefreshCharacterData(summaryKey)) && !missingTrainingLevel && !finishedTraining) {
+	if (!(await shouldRefreshCharacterData(summaryKey)) && !missingTrainingLevel && !missingCharacterBoosterFlag && !finishedTraining) {
 		return;
 	}
 
@@ -2998,6 +3002,8 @@ async function refreshCharacterSummaryInBackground(characterId, characterName) {
 			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/implants`, characterId),
 			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}`, characterId)
 		]);
+		const implantInfos = await Promise.all((implants || []).map((typeId) => getTypeInfo(typeId)));
+		const implantByAttribute = buildAttributeImplantMap(implantInfos);
 		const corporationId = char?.corporation_id ? String(char.corporation_id) : null;
 		const allianceId = char?.alliance_id ? String(char.alliance_id) : null;
 		if (corporationId) {
@@ -3012,14 +3018,23 @@ async function refreshCharacterSummaryInBackground(characterId, characterName) {
 		let training = null;
 		if (Array.isArray(queue) && queue.length > 0) {
 			const active = pickCurrentOrNextQueueRow(queue);
+			const typeInfos = new Map(await Promise.all(
+				queue.map(async (row) => [Number(row?.skill_id || 0), await getTypeInfo(row?.skill_id)])
+			));
+			const inferredAttributeOffset = inferGlobalAttributeOffset(queue, typeInfos, attr);
+			const baselineAttributes = subtractGlobalAttributeOffset(attr, inferredAttributeOffset);
+			const hasCharacterBooster = inferredAttributeOffset > 0 || await inferQueueHasBooster(queue, baselineAttributes, typeInfos);
 			if (active) {
 				const queueEmptyMs = Math.max(0, ...queue.map((row) => (row?.finish_date ? (Date.parse(row.finish_date) || 0) : 0)));
 				const typeInfo = await getTypeInfo(active?.skill_id);
+				const trainingRate = getQueueRowTrainingRateContext(active, typeInfo, baselineAttributes);
 				training = {
 					typeName: typeInfo?.name || null,
 					level: Number(active?.finished_level || 0),
 					trainingEndMs: active?.finish_date ? Date.parse(active.finish_date) : 0,
-					queueEmptyMs
+					queueEmptyMs,
+					hasTrainingBooster: trainingRate.hasTrainingBooster,
+					hasCharacterBooster
 				};
 			}
 		}
@@ -3045,14 +3060,21 @@ async function refreshCharacterSummaryInBackground(characterId, characterName) {
 async function refreshCharacterPageInBackground(characterId, tab) {
 	const commonKey = `common:${characterId}`;
 	const cachedCommon = await cacheGetCharacterData(commonKey);
+	const cachedOverview = await cacheGetCharacterData(`overview:${characterId}`);
 	const missingTrainingLevel = Boolean(cachedCommon?.training?.typeName)
 		&& !Number(cachedCommon?.training?.level || 0);
+	const missingTrainingBoosterFlag = Boolean(cachedCommon?.training?.typeName)
+		&& !Object.prototype.hasOwnProperty.call(cachedCommon?.training || {}, 'hasTrainingBooster');
+	const missingCharacterBoosterFlag = Boolean(cachedCommon?.training?.typeName)
+		&& !Object.prototype.hasOwnProperty.call(cachedCommon?.training || {}, 'hasCharacterBooster');
+	const missingOverviewBoosterFlags = Array.isArray(cachedOverview?.queue)
+		&& cachedOverview.queue.some((row) => !Object.prototype.hasOwnProperty.call(row || {}, 'hasTrainingBooster'));
 	const finishedTraining = hasTrainingCompleted(cachedCommon?.training);
 	const shouldRefreshCommon = await shouldRefreshCharacterData(commonKey);
 	const shouldRefreshWallet = await shouldRefreshCharacterData(`wallet:${characterId}`);
 	const shouldRefreshTrain = await shouldRefreshCharacterData(`train:${characterId}`);
 	const shouldRefreshOverview = await shouldRefreshCharacterData(`overview:${characterId}`);
-	if (!shouldRefreshCommon && !missingTrainingLevel && !finishedTraining) {
+	if (!shouldRefreshCommon && !missingTrainingLevel && !missingTrainingBoosterFlag && !missingCharacterBoosterFlag && !missingOverviewBoosterFlags && !finishedTraining) {
 		if (tab === 'wallet' && !shouldRefreshWallet) return;
 		if (tab === 'train' && !shouldRefreshTrain) return;
 		if (tab === 'overview' && !shouldRefreshOverview) return;
@@ -3060,7 +3082,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 	}
 
 	try {
-		if (missingTrainingLevel || finishedTraining || shouldRefreshCommon) {
+		if (missingTrainingLevel || missingTrainingBoosterFlag || missingCharacterBoosterFlag || missingOverviewBoosterFlags || finishedTraining || shouldRefreshCommon) {
 			const common = await fetchCharacterCommonData(characterId);
 			common.message = null;
 			common.updatedAt = Date.now();
@@ -3085,7 +3107,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 		}
 
 		if (tab === 'overview') {
-			if (!shouldRefreshOverview) return;
+			if (!shouldRefreshOverview && !missingOverviewBoosterFlags) return;
 			const overview = await fetchSkillsOverview(characterId);
 			overview.updatedAt = Date.now();
 			await cacheSetCharacterData(`overview:${characterId}`, overview)
@@ -3106,7 +3128,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 				|| await cacheTouchCharacterData(`train:${characterId}`);
 		}
 
-		if (!shouldRefreshOverview) return;
+		if (!shouldRefreshOverview && !missingOverviewBoosterFlags) return;
 		const overview = await fetchSkillsOverview(characterId);
 		overview.updatedAt = Date.now();
 		await cacheSetCharacterData(`overview:${characterId}`, overview)
@@ -3270,7 +3292,7 @@ async function shouldRefreshCharacterData(key) {
 
 async function fetchCharacterCommonData(characterId) {
 	try {
-		const [charInfo, balance, queue, history] = await Promise.all([
+		const [charInfo, balance, queue, history, attributes, implants] = await Promise.all([
 			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}`, characterId),
 			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/wallet`, characterId),
 			fallbackUnlessCharacterRefreshTokenError(
@@ -3278,8 +3300,21 @@ async function fetchCharacterCommonData(characterId) {
 				[],
 				characterId
 			),
-			fetchLatestCharacterJson(`${ESI_BASE}/characters/${characterId}/corporationhistory`).catch(() => [])
+			fetchLatestCharacterJson(`${ESI_BASE}/characters/${characterId}/corporationhistory`).catch(() => []),
+			fallbackUnlessCharacterRefreshTokenError(
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/attributes`, characterId),
+				null,
+				characterId
+			),
+			fallbackUnlessCharacterRefreshTokenError(
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/implants`, characterId),
+				[],
+				characterId
+			)
 		]);
+
+		const implantInfos = await Promise.all((implants || []).map((typeId) => getTypeInfo(typeId)));
+		buildAttributeImplantMap(implantInfos);
 
 		const [corporation, alliance] = await Promise.all([
 			charInfo?.corporation_id ? getCorporationInfo(charInfo.corporation_id) : null,
@@ -3291,14 +3326,23 @@ async function fetchCharacterCommonData(characterId) {
 		const corporationJoinDate = currentCorpHistory?.start_date || currentCorpHistory?.record_start_date || '';
 		if (Array.isArray(queue) && queue.length > 0) {
 			const active = pickCurrentOrNextQueueRow(queue);
+			const typeInfos = new Map(await Promise.all(
+				queue.map(async (row) => [Number(row?.skill_id || 0), await getTypeInfo(row?.skill_id)])
+			));
+			const inferredAttributeOffset = inferGlobalAttributeOffset(queue, typeInfos, attributes);
+			const baselineAttributes = subtractGlobalAttributeOffset(attributes, inferredAttributeOffset);
+			const hasCharacterBooster = inferredAttributeOffset > 0 || await inferQueueHasBooster(queue, baselineAttributes, typeInfos);
 			if (active) {
 				const queueEmptyMs = Math.max(0, ...queue.map((row) => (row?.finish_date ? (Date.parse(row.finish_date) || 0) : 0)));
 				const typeInfo = await getTypeInfo(active.skill_id);
+				const trainingRate = getQueueRowTrainingRateContext(active, typeInfo, baselineAttributes);
 				training = {
 					typeName: typeInfo?.name || `Skill ${active.skill_id}`,
 					level: Number(active.finished_level || 0),
 					trainingEndMs: active.finish_date ? Date.parse(active.finish_date) : 0,
-					queueEmptyMs
+					queueEmptyMs,
+					hasTrainingBooster: trainingRate.hasTrainingBooster,
+					hasCharacterBooster
 				};
 			}
 		}
@@ -3333,10 +3377,20 @@ async function fetchCharacterCommonData(characterId) {
 
 async function fetchSkillsOverview(characterId) {
 	try {
-		const [skillsResponse, queueResponse] = await Promise.all([
+		const [skillsResponse, queueResponse, attributes, implants] = await Promise.all([
 			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skills`, characterId),
 			fallbackUnlessCharacterRefreshTokenError(
 				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skillqueue`, characterId),
+				[],
+				characterId
+			),
+			fallbackUnlessCharacterRefreshTokenError(
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/attributes`, characterId),
+				null,
+				characterId
+			),
+			fallbackUnlessCharacterRefreshTokenError(
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/implants`, characterId),
 				[],
 				characterId
 			)
@@ -3350,10 +3404,16 @@ async function fetchSkillsOverview(characterId) {
 		const typeInfos = new Map(await Promise.all(skillIds.map(async (skillId) => [skillId, await getTypeInfo(skillId)])));
 		const groupIds = Array.from(new Set(Array.from(typeInfos.values()).map((info) => info?.group_id).filter(Boolean)));
 		const groupInfos = new Map(await Promise.all(groupIds.map(async (groupId) => [groupId, await getGroupInfo(groupId)])));
+		const implantInfos = await Promise.all((implants || []).map((typeId) => getTypeInfo(typeId)));
+		buildAttributeImplantMap(implantInfos);
+		const inferredAttributeOffset = inferGlobalAttributeOffset(queue, typeInfos, attributes);
+		const baselineAttributes = subtractGlobalAttributeOffset(attributes, inferredAttributeOffset);
+		const hasCharacterBooster = inferredAttributeOffset > 0;
 
 		const queueRows = queue.map((row) => {
 			const typeInfo = typeInfos.get(row.skill_id);
 			const groupInfo = groupInfos.get(typeInfo?.group_id);
+			const trainingRate = getQueueRowTrainingRateContext(row, typeInfo, baselineAttributes);
 			const startSp = Number(row.training_start_sp ?? row.level_start_sp ?? 0);
 			const endSp = Number(row.level_end_sp ?? 0);
 			const startMs = row.start_date ? Date.parse(row.start_date) : 0;
@@ -3372,9 +3432,14 @@ async function fetchSkillsOverview(characterId) {
 				typeID: row.skill_id,
 				groupName: groupInfo?.name || '',
 				level: Number(row.finished_level || 0),
+				primaryAttribute: trainingRate.primaryAttribute,
+				secondaryAttribute: trainingRate.secondaryAttribute,
 				startDate: row.start_date || null,
 				endDate: row.finish_date || null,
-				spHour: calculateSpPerHour(row),
+				spHour: trainingRate.actualSpHour,
+				expectedSpHour: trainingRate.expectedSpHour,
+				hasTrainingBooster: trainingRate.hasTrainingBooster,
+				hasCharacterBooster,
 				spNeeded
 			};
 		});
@@ -3493,11 +3558,14 @@ function applyOverviewTrainingToCommonData(data, queueRows) {
 	const nextEntry = pickCurrentOrNextOverviewQueueEntry(queueRows || []);
 	if (!nextEntry) return;
 	const queueEmptyMs = Math.max(0, ...(queueRows || []).map((row) => (row?.endDate ? (Date.parse(row.endDate) || 0) : 0)));
+	const hasCharacterBooster = (queueRows || []).some((row) => Boolean(row?.hasTrainingBooster));
 	data.training = {
 		typeName: nextEntry.typeName || '',
 		level: Number(nextEntry.level || 0),
 		trainingEndMs: nextEntry.endDate ? Date.parse(nextEntry.endDate) : 0,
-		queueEmptyMs
+		queueEmptyMs,
+		hasTrainingBooster: Boolean(nextEntry.hasTrainingBooster),
+		hasCharacterBooster
 	};
 }
 
@@ -3965,11 +4033,98 @@ function attributeIdToName(attributeId) {
 	return map[Number(attributeId)] || '';
 }
 
+function getSkillTrainingAttributes(typeInfo) {
+	const dogma = new Map((typeInfo?.dogma_attributes || []).map((attr) => [attr.attribute_id, attr.value]));
+	return {
+		primaryAttribute: attributeIdToName(dogma.get(180)),
+		secondaryAttribute: attributeIdToName(dogma.get(181))
+	};
+}
+
 function calculateSkillSpPerHour(attributes, primaryAttribute, secondaryAttribute) {
 	const primary = Number(attributes?.[primaryAttribute] || 0);
 	const secondary = Number(attributes?.[secondaryAttribute] || 0);
 	if (primary <= 0) return 0;
 	return (primary + (secondary / 2)) * 60;
+}
+
+function getQueueRowTrainingRateContext(queueRow, typeInfo, attributes) {
+	const { primaryAttribute, secondaryAttribute } = getSkillTrainingAttributes(typeInfo);
+	const expectedSpHour = calculateSkillSpPerHour(attributes, primaryAttribute, secondaryAttribute);
+	const actualSpHour = calculateSpPerHour(queueRow);
+	const spHourDelta = actualSpHour - expectedSpHour;
+	// Keep a practical tolerance so tiny queue rounding drift does not produce false positives.
+	const deltaThresholdSpHour = 1;
+	const hasRateDeltaBooster = expectedSpHour > 0 && spHourDelta > deltaThresholdSpHour;
+	// If expected rate cannot be derived (missing dogma), prefer showing a badge over suppressing it.
+	const hasUnknownBaselineButFastTraining = expectedSpHour <= 0 && actualSpHour > 0;
+	const hasTrainingBooster = hasRateDeltaBooster || hasUnknownBaselineButFastTraining;
+	const withinTolerance = expectedSpHour > 0 && Math.abs(spHourDelta) <= deltaThresholdSpHour;
+	return {
+		primaryAttribute,
+		secondaryAttribute,
+		expectedSpHour,
+		actualSpHour,
+		hasTrainingBooster
+	};
+}
+
+async function inferQueueHasBooster(queueRows, attributes, preloadedTypeInfos = null) {
+	const rows = Array.isArray(queueRows) ? queueRows : [];
+	for (const row of rows) {
+		const typeInfo = preloadedTypeInfos?.get?.(Number(row?.skill_id || 0)) || await getTypeInfo(row?.skill_id);
+		const ctx = getQueueRowTrainingRateContext(row, typeInfo, attributes);
+		if (ctx.hasTrainingBooster) return true;
+	}
+	return false;
+}
+
+function subtractGlobalAttributeOffset(attributes, offset) {
+	const safeOffset = Math.max(0, Number(offset || 0));
+	const names = ['charisma', 'intelligence', 'memory', 'perception', 'willpower'];
+	const next = { ...(attributes || {}) };
+	for (const name of names) {
+		next[name] = Math.max(0, Number(attributes?.[name] || 0) - safeOffset);
+	}
+	return next;
+}
+
+function inferGlobalAttributeOffset(queueRows, typeInfos, attributes) {
+	const rows = Array.isArray(queueRows) ? queueRows : [];
+	if (!rows.length) return 0;
+
+	const attrNames = ['charisma', 'intelligence', 'memory', 'perception', 'willpower'];
+	const minAttr = Math.min(...attrNames.map((name) => Number(attributes?.[name] || 0)).filter((value) => value > 0));
+	const maxOffset = Math.max(0, Math.min(15, Math.floor(minAttr)));
+
+	const scoreForOffset = (offset) => {
+		const baseline = subtractGlobalAttributeOffset(attributes, offset);
+		const deltas = [];
+		for (const row of rows) {
+			const typeInfo = typeInfos?.get?.(Number(row?.skill_id || 0));
+			if (!typeInfo) continue;
+			const ctx = getQueueRowTrainingRateContext(row, typeInfo, baseline);
+			if (!(ctx.expectedSpHour > 0) || !(ctx.actualSpHour > 0)) continue;
+			deltas.push(Math.abs(ctx.actualSpHour - ctx.expectedSpHour));
+		}
+		if (!deltas.length) return Number.POSITIVE_INFINITY;
+		deltas.sort((a, b) => a - b);
+		return deltas[Math.floor(deltas.length / 2)];
+	};
+
+	const scoreAtZero = scoreForOffset(0);
+	let bestOffset = 0;
+	let bestScore = scoreAtZero;
+	for (let offset = 1; offset <= maxOffset; offset += 1) {
+		const score = scoreForOffset(offset);
+		if (score < bestScore) {
+			bestScore = score;
+			bestOffset = offset;
+		}
+	}
+
+	if (!Number.isFinite(scoreAtZero) || !Number.isFinite(bestScore)) return 0;
+	return (bestOffset > 0 && (scoreAtZero - bestScore) > 40) ? bestOffset : 0;
 }
 
 function getSkillPointsForLevel(level, rank) {
