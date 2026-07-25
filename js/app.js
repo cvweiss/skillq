@@ -4053,13 +4053,13 @@ function getQueueRowTrainingRateContext(queueRow, typeInfo, attributes) {
 	const expectedSpHour = calculateSkillSpPerHour(attributes, primaryAttribute, secondaryAttribute);
 	const actualSpHour = calculateSpPerHour(queueRow);
 	const spHourDelta = actualSpHour - expectedSpHour;
-	// Keep a practical tolerance so tiny queue rounding drift does not produce false positives.
-	const deltaThresholdSpHour = 1;
+	// Treat only meaningful rate gains as a booster: tiny +1/s style drift should not trigger.
+	const boosterToleranceSpSecond = 3;
+	const deltaThresholdSpHour = boosterToleranceSpSecond * 3600;
 	const hasRateDeltaBooster = expectedSpHour > 0 && spHourDelta > deltaThresholdSpHour;
 	// If expected rate cannot be derived (missing dogma), prefer showing a badge over suppressing it.
 	const hasUnknownBaselineButFastTraining = expectedSpHour <= 0 && actualSpHour > 0;
 	const hasTrainingBooster = hasRateDeltaBooster || hasUnknownBaselineButFastTraining;
-	const withinTolerance = expectedSpHour > 0 && Math.abs(spHourDelta) <= deltaThresholdSpHour;
 	return {
 		primaryAttribute,
 		secondaryAttribute,
