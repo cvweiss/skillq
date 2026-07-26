@@ -231,9 +231,9 @@ function renderCharCard({ character, training = null } = {}) {
 			info.appendChild(countdown);
 		}
 
-		if (training.hasTrainingBooster || training.hasCharacterBooster) {
+		if (training.hasTrainingBooster) {
 			const boosterWrap = _el('div', 'sq-char-card__booster');
-			boosterWrap.appendChild(_boosterBadge(training.hasTrainingBooster ? 'Booster' : 'Booster Active'));
+			boosterWrap.appendChild(_boosterBadge('Booster'));
 			info.appendChild(boosterWrap);
 		}
 
@@ -308,9 +308,9 @@ function renderCharInfo({ character, corporation = null, alliance = null, traini
 			countdown.dataset.until = training.trainingEndMs;
 			details.appendChild(countdown);
 		}
-		if (training.hasTrainingBooster || training.hasCharacterBooster) {
+		if (training.hasTrainingBooster) {
 			const boosterWrap = _el('div', 'sq-char-info__booster');
-			boosterWrap.appendChild(_boosterBadge(training.hasTrainingBooster ? 'Booster' : 'Booster Active'));
+			boosterWrap.appendChild(_boosterBadge('Booster'));
 			details.appendChild(boosterWrap);
 		}
 		if (training.queueEmptyMs && training.queueEmptyMs - Date.now() < 86400000) {
