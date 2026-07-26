@@ -297,7 +297,11 @@ function renderCharInfo({ character, corporation = null, alliance = null, traini
 	details.appendChild(_el('strong', 'sq-char-info__name', name));
 	if (corporation?.name) details.appendChild(_el('div', 'sq-char-info__corp', corporation.name));
 	if (alliance?.name)    details.appendChild(_el('div', 'sq-char-info__alliance', alliance.name));
-	if (showBalance)       details.appendChild(_el('div', 'sq-char-info__balance', `${numberFormat(balance, 2)} ISK`));
+	if (showBalance) {
+		details.appendChild(_el('div', 'sq-char-info__balance', `${numberFormat(balance, 2)} ISK`));
+	} else {
+		details.appendChild(_el('div', 'sq-char-info__balance sq-muted', 'Wallet balance not included in this shared snapshot.'));
+	}
 
 	if (training?.typeName) {
 		const trainingEl = _el('div', 'sq-char-info__training');
@@ -717,17 +721,19 @@ function renderCharTrain({ implants = [], suggestions = [] } = {}) {
 	return el;
 }
 
-function renderSharedCharSkills({ queue = [], skills = [], totalSP = 0 } = {}) {
+function renderSharedCharSkills({ queue = [], skills = [], totalSP = 0, hasSharedTotalSP = true } = {}) {
 	const el = _el('div', 'sq-skills');
 	const now = Date.now();
 	const visibleQueue = (queue || []).filter((entry) => Number(entry.trainingEndMs || 0) <= 0 || Number(entry.trainingEndMs || 0) > now);
 
-	if (visibleQueue.length > 0) {
-		const trainingSection = _el('section', 'sq-queue');
-		const trainingHeader = _el('h4', 'sq-section-title');
-		trainingHeader.innerHTML = `Skill Queue <small>(${visibleQueue.length} in queue. All times UTC)</small>`;
-		trainingSection.appendChild(trainingHeader);
+	const trainingSection = _el('section', 'sq-queue');
+	const trainingHeader = _el('h4', 'sq-section-title');
+	trainingHeader.innerHTML = `Skill Queue <small>(${visibleQueue.length} in queue. All times UTC)</small>`;
+	trainingSection.appendChild(trainingHeader);
 
+	if (visibleQueue.length === 0) {
+		trainingSection.appendChild(_el('p', 'sq-muted', 'No queue rows were included in this shared snapshot.'));
+	} else {
 		const trainingTable = document.createElement('table');
 		trainingTable.className = 'sq-table sq-table--striped';
 		const trainingHead = document.createElement('thead');
@@ -768,17 +774,17 @@ function renderSharedCharSkills({ queue = [], skills = [], totalSP = 0 } = {}) {
 		trainingTable.appendChild(trainingHead);
 		trainingTable.appendChild(trainingBody);
 		trainingSection.appendChild(trainingTable);
-		el.appendChild(trainingSection);
 	}
+	el.appendChild(trainingSection);
 
 	const section = _el('section', 'sq-skill-groups');
 	const heading = _el('h4', 'sq-section-title');
-	const totalSpSummary = Number(totalSP || 0) > 0 ? `${numberFormat(totalSP, 0)} SP / ` : '';
+	const totalSpSummary = hasSharedTotalSP ? `${numberFormat(totalSP, 0)} SP / ` : 'Total SP not included / ';
 	heading.innerHTML = `Shared Skills <small>${totalSpSummary}${skills.length} Skills</small>`;
 	section.appendChild(heading);
 
 	if (skills.length === 0) {
-		section.appendChild(_el('p', 'sq-muted', 'No shared overview skills are available.'));
+		section.appendChild(_el('p', 'sq-muted', 'No overview skill rows were included in this shared snapshot.'));
 		el.appendChild(section);
 		return el;
 	}
@@ -792,7 +798,7 @@ function renderSharedCharSkills({ queue = [], skills = [], totalSP = 0 } = {}) {
 
 	const controls = _el('div', 'sq-skill-controls');
 	const addCtrl = (label, fn) => {
-		const btn = _el('button', 'sq-btn sql-btn--info sq-btn--sm', label);
+		const btn = _el('button', 'sq-btn sq-btn--info sq-btn--sm', label);
 		btn.addEventListener('click', fn);
 		controls.appendChild(btn);
 	};
@@ -802,7 +808,7 @@ function renderSharedCharSkills({ queue = [], skills = [], totalSP = 0 } = {}) {
 
 	const grouped = new Map();
 	for (const skill of skills) {
-		if (!grouped.has(skill.groupID)) grouped.set(skill.groupID, { name: skill.groupName, count: 0, skills: [] });
+		if (!grouped.has(skill.groupID)) grouped.set(skill.groupID, { name: skill.groupName || 'Unknown Group', count: 0, skills: [] });
 		const group = grouped.get(skill.groupID);
 		group.count += 1;
 		group.skills.push(skill);
