@@ -43,6 +43,13 @@ const SIMPLEESI_CHAR_KEY_PREFIX = 'simpleesi-';
 const SIMPLEESI_AUTHED_SUFFIX = '-authed_json';
 const SHARE_URL_VERSION = 1;
 const SHARE_LINK_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const SHARE_EMPTY_SKILLS_TOKEN = 'none';
+const SHARE_SECTION_KEYS = {
+	overviewSkills: 'overviewSkills',
+	skillQueue: 'skillQueue',
+	totalSkillPoints: 'totalSkillPoints',
+	walletBalance: 'walletBalance'
+};
 let githubhash = "";
 const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '--hash--';
 let layoutMode = 'restricted';
@@ -368,24 +375,221 @@ function showItemLoading(itemId) {
 	document.getElementById('skillq').classList.remove('d-none');
 }
 
-function renderCharacterShareControls({ character, skills = [], totalSP = 0, lastUpdatedAt = null } = {}) {
+function getDefaultShareSections() {
+	return {
+		[SHARE_SECTION_KEYS.overviewSkills]: true,
+		[SHARE_SECTION_KEYS.skillQueue]: true,
+		[SHARE_SECTION_KEYS.totalSkillPoints]: true,
+		[SHARE_SECTION_KEYS.walletBalance]: true
+	};
+}
+
+function normalizeShareSections(sections) {
+	const defaults = getDefaultShareSections();
+	if (!sections || typeof sections !== 'object') return defaults;
+	return {
+		[SHARE_SECTION_KEYS.overviewSkills]: sections[SHARE_SECTION_KEYS.overviewSkills] !== false,
+		[SHARE_SECTION_KEYS.skillQueue]: sections[SHARE_SECTION_KEYS.skillQueue] !== false,
+		[SHARE_SECTION_KEYS.totalSkillPoints]: sections[SHARE_SECTION_KEYS.totalSkillPoints] !== false,
+		[SHARE_SECTION_KEYS.walletBalance]: sections[SHARE_SECTION_KEYS.walletBalance] !== false
+	};
+}
+
+function getShareSectionChecklistState({ skills = [], queue = [], totalSP = 0, balance = 0 } = {}) {
+	return [
+		{
+			key: SHARE_SECTION_KEYS.overviewSkills,
+			label: 'Overview skills',
+			help: Array.isArray(skills) && skills.length > 0
+				? `${skills.length} skills ready`
+				: 'No overview skills loaded yet',
+			available: Array.isArray(skills) && skills.length > 0
+		},
+		{
+			key: SHARE_SECTION_KEYS.skillQueue,
+			label: 'Skill queue',
+			help: Array.isArray(queue) && queue.length > 0
+				? `${Math.min(25, queue.length)} queue rows ready`
+				: 'No queue rows loaded yet',
+			available: Array.isArray(queue) && queue.length > 0
+		},
+		{
+			key: SHARE_SECTION_KEYS.totalSkillPoints,
+			label: 'Total skill points',
+			help: `${numberFormat(Number(totalSP || 0), 0)} SP`,
+			available: true
+		},
+		{
+			key: SHARE_SECTION_KEYS.walletBalance,
+			label: 'Wallet balance',
+			help: `${numberFormat(Number(balance || 0), 2)} ISK`,
+			available: true
+		}
+	];
+}
+
+function showShareSectionChecklistDialog(checklistState, defaults = getDefaultShareSections()) {
+	return new Promise((resolve) => {
+		const overlay = document.createElement('div');
+		overlay.className = 'sq-share-dialog-backdrop';
+
+		const dialog = document.createElement('div');
+		dialog.className = 'sq-share-dialog';
+		dialog.setAttribute('role', 'dialog');
+		dialog.setAttribute('aria-modal', 'true');
+		dialog.setAttribute('aria-labelledby', 'sq-share-dialog-title');
+
+		const title = document.createElement('h3');
+		title.id = 'sq-share-dialog-title';
+		title.className = 'sq-share-dialog__title';
+		title.textContent = 'Choose sections to include';
+		dialog.appendChild(title);
+
+		const subtitle = document.createElement('p');
+		subtitle.className = 'sq-share-dialog__subtitle';
+		subtitle.textContent = 'Only checked sections will be added to this share link.';
+		dialog.appendChild(subtitle);
+
+		const list = document.createElement('div');
+		list.className = 'sq-share-checklist';
+
+		const checkboxByKey = new Map();
+		for (const item of checklistState) {
+			const row = document.createElement('label');
+			row.className = 'sq-share-checklist__item';
+
+			const input = document.createElement('input');
+			input.type = 'checkbox';
+			input.checked = item.available && defaults[item.key] !== false;
+			input.disabled = !item.available;
+			if (!item.available) row.classList.add('sq-share-checklist__item--disabled');
+			row.appendChild(input);
+
+			const text = document.createElement('span');
+			text.className = 'sq-share-checklist__text';
+
+			const name = document.createElement('span');
+			name.className = 'sq-share-checklist__label';
+			name.textContent = item.label;
+			text.appendChild(name);
+
+			const help = document.createElement('small');
+			help.className = 'sq-share-checklist__help';
+			help.textContent = item.help;
+			text.appendChild(help);
+
+			row.appendChild(text);
+			list.appendChild(row);
+			checkboxByKey.set(item.key, input);
+		}
+
+		dialog.appendChild(list);
+
+		const createHint = document.createElement('p');
+		createHint.className = 'sq-share-dialog__hint sq-muted';
+		createHint.textContent = 'Select at least one section to enable share creation.';
+		dialog.appendChild(createHint);
+
+		const actions = document.createElement('div');
+		actions.className = 'sq-share-dialog__actions';
+
+		const cancelBtn = document.createElement('button');
+		cancelBtn.type = 'button';
+		cancelBtn.className = 'sq-btn sq-btn--ghost';
+		cancelBtn.textContent = 'Cancel';
+
+		const createBtn = document.createElement('button');
+		createBtn.type = 'button';
+		createBtn.className = 'sq-btn sq-btn--primary';
+		createBtn.textContent = 'Create Share Link';
+
+		actions.appendChild(cancelBtn);
+		actions.appendChild(createBtn);
+		dialog.appendChild(actions);
+
+		overlay.appendChild(dialog);
+		document.body.appendChild(overlay);
+
+		const cleanup = (value) => {
+			document.removeEventListener('keydown', onKeyDown);
+			overlay.remove();
+			resolve(value);
+		};
+
+		const collectSelectedSections = () => normalizeShareSections({
+			[SHARE_SECTION_KEYS.overviewSkills]: checkboxByKey.get(SHARE_SECTION_KEYS.overviewSkills)?.checked,
+			[SHARE_SECTION_KEYS.skillQueue]: checkboxByKey.get(SHARE_SECTION_KEYS.skillQueue)?.checked,
+			[SHARE_SECTION_KEYS.totalSkillPoints]: checkboxByKey.get(SHARE_SECTION_KEYS.totalSkillPoints)?.checked,
+			[SHARE_SECTION_KEYS.walletBalance]: checkboxByKey.get(SHARE_SECTION_KEYS.walletBalance)?.checked
+		});
+
+		const hasAnySelectedSection = () => Array.from(checkboxByKey.values()).some((input) => input.checked);
+		const syncCreateButtonState = () => {
+			createBtn.disabled = !hasAnySelectedSection();
+			if (createBtn.disabled) {
+				createBtn.title = 'Select at least one section to create a share link.';
+				createHint.classList.add('sq-share-dialog__hint--visible');
+			} else {
+				createBtn.title = '';
+				createHint.classList.remove('sq-share-dialog__hint--visible');
+			}
+		};
+
+		for (const input of checkboxByKey.values()) {
+			input.addEventListener('change', syncCreateButtonState);
+		}
+		syncCreateButtonState();
+
+		const onKeyDown = (event) => {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				cleanup(null);
+			}
+		};
+
+		cancelBtn.addEventListener('click', () => cleanup(null));
+		overlay.addEventListener('click', (event) => {
+			if (event.target === overlay) cleanup(null);
+		});
+		createBtn.addEventListener('click', () => {
+			if (createBtn.disabled) return;
+			cleanup(collectSelectedSections());
+		});
+
+		document.addEventListener('keydown', onKeyDown);
+
+		requestAnimationFrame(() => {
+			const firstEnabled = Array.from(checkboxByKey.values()).find((input) => !input.disabled);
+			(firstEnabled || createBtn).focus();
+		});
+	});
+}
+
+function renderCharacterShareControls({ character, skills = [], queue = [], totalSP = 0, lastUpdatedAt = null } = {}) {
 	const button = document.createElement('button');
 	button.type = 'button';
 	button.className = 'sq-char-info__action';
 	button.setAttribute('aria-label', 'Copy share link');
-	button.title = !Array.isArray(skills) || skills.length === 0
-		? 'Share becomes available once overview skills are loaded.'
-		: `Create a share link${lastUpdatedAt ? ` from ${formatDateTime(lastUpdatedAt)}` : ''}`;
-	button.disabled = !Array.isArray(skills) || skills.length === 0;
+	button.title = `Create a share link${lastUpdatedAt ? ` from ${formatDateTime(lastUpdatedAt)}` : ''}`;
+	button.disabled = false;
 	button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5a3 3 0 1 1 2.83 4H17l-6.2 3.35a3.02 3.02 0 0 1 0 1.3L17 17h.83A3 3 0 1 1 15 19a3 3 0 0 1 .2-1.08l-6.2-3.35a3 3 0 1 1 0-5.14l6.2-3.35A3 3 0 0 1 15 5Zm-8 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10-4a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm0 12a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" fill="currentColor"/></svg>';
 
 	button.addEventListener('click', async () => {
 		if (button.disabled) return;
+		const checklistState = getShareSectionChecklistState({
+			skills,
+			queue,
+			totalSP,
+			balance: Number(character?.balance || 0)
+		});
+		const selectedSections = await showShareSectionChecklistDialog(checklistState, getDefaultShareSections());
+		if (!selectedSections) return;
+
 		button.disabled = true;
 		const previousTitle = button.title;
 		button.title = 'Building share link...';
 		try {
-			const url = await buildCharacterShareUrl(character, skills, totalSP);
+			const url = await buildCharacterShareUrl(character, skills, queue, totalSP, selectedSections);
 			if (navigator.clipboard?.writeText) {
 				await navigator.clipboard.writeText(url);
 				button.title = 'Share link copied';
@@ -398,7 +602,7 @@ function renderCharacterShareControls({ character, skills = [], totalSP = 0, las
 		} catch (err) {
 			button.title = err?.message || 'Unable to build share link.';
 		} finally {
-			button.disabled = !Array.isArray(skills) || skills.length === 0;
+			button.disabled = false;
 			if (!button.disabled && button.title === 'Share link copied') {
 				setTimeout(() => {
 					button.title = previousTitle;
@@ -454,7 +658,7 @@ function showToast(message, anchorEl = null) {
 	}, 1800);
 }
 
-async function buildCharacterShareUrl(character, skills, totalSP = 0) {
+async function buildCharacterShareUrl(character, skills, queue = [], totalSP = 0, selectedSections = null) {
 	if (typeof SkillUrlCodecSafe === 'undefined') {
 		throw new Error('Share codec is not available.');
 	}
@@ -462,11 +666,16 @@ async function buildCharacterShareUrl(character, skills, totalSP = 0) {
 	if (!characterId) {
 		throw new Error('Character information is missing.');
 	}
+	const sections = normalizeShareSections(selectedSections);
 	const overviewCached = await cacheGetCharacterData(`overview:${characterId}`);
-	const queue = Array.isArray(overviewCached?.queue) ? overviewCached.queue.slice(0, 25) : [];
+	const selectedQueueSource = Array.isArray(queue) && queue.length > 0
+		? queue
+		: (Array.isArray(overviewCached?.queue) ? overviewCached.queue : []);
+	const queueRows = selectedQueueSource.slice(0, 25);
+	const normalizedSkills = Array.isArray(skills) ? skills : [];
 
 	// Encode each trained skill as a base record (current level, no timing)
-	const trainedRecords = (skills || [])
+	const trainedRecords = normalizedSkills
 		.filter((s) => Number(s.typeID || 0) > 0)
 		.map((s) => ({
 			type_id: Number(s.typeID),
@@ -476,7 +685,7 @@ async function buildCharacterShareUrl(character, skills, totalSP = 0) {
 	// Encode each queue row as one record with compact timing:
 	// first row keeps absolute start; all rows store end delta to previous queue boundary.
 	let previousQueueEndUnix = 0;
-	const queueRecords = queue
+	const queueRecords = queueRows
 		.filter((row) => Number(row?.typeID || 0) > 0)
 		.map((row, index) => {
 			const record = {
@@ -511,15 +720,21 @@ async function buildCharacterShareUrl(character, skills, totalSP = 0) {
 			return record;
 		});
 
-	const recordArray = [...trainedRecords, ...queueRecords];
-	if (recordArray.length === 0) {
-		throw new Error('No overview skills are available to share yet.');
-	}
-	const encodedSkills = await encodeShareSkillsPayload(recordArray);
+	const selectedRecords = [
+		...(sections[SHARE_SECTION_KEYS.overviewSkills] ? trainedRecords : []),
+		...(sections[SHARE_SECTION_KEYS.skillQueue] ? queueRecords : [])
+	];
+	const encodedSkills = selectedRecords.length > 0
+		? await encodeShareSkillsPayload(selectedRecords)
+		: SHARE_EMPTY_SKILLS_TOKEN;
 	const shareContext = await getCharacterShareContext(characterId, { cacheOnly: true });
-	const encodedTotalSP = encodeCompactInt(totalSP);
+	const encodedTotalSP = sections[SHARE_SECTION_KEYS.totalSkillPoints]
+		? encodeCompactInt(totalSP)
+		: '';
 	const balanceCents = Math.max(0, Math.round(Number(character?.balance || 0) * 100));
-	const encodedBalance = encodeCompactInt(balanceCents);
+	const encodedBalance = sections[SHARE_SECTION_KEYS.walletBalance]
+		? encodeCompactInt(balanceCents)
+		: '';
 	const snapshotUnix = Math.floor(Date.now() / 1000);
 	const encodedSnapshotUnix = encodeCompactInt(snapshotUnix);
 	const signature = await createCharacterShareSignature(
@@ -770,6 +985,9 @@ async function encodeShareSkillsPayload(records) {
 
 async function decodeShareSkillsPayload(encodedSkills) {
 	const payload = String(encodedSkills || '').trim();
+	if (payload === '' || payload === SHARE_EMPTY_SKILLS_TOKEN) {
+		return [];
+	}
 	if (!payload) {
 		throw new Error('This shared link is missing required data.');
 	}
@@ -1013,7 +1231,7 @@ async function renderSharedCharacterPage() {
 		if (version !== SHARE_URL_VERSION) {
 			throw new Error('This shared link uses an unsupported format version.');
 		}
-		if (!characterId || !encodedSkills || !providedSignature) {
+		if (!characterId || !providedSignature) {
 			throw new Error('This shared link is missing required data.');
 		}
 		if (snapshotUnix <= 0) {
@@ -1083,7 +1301,12 @@ async function renderSharedCharacterPage() {
 		`;
 		page.appendChild(notice);
 
-		page.appendChild(renderSharedCharSkills({ queue: sharedData.queue, skills: sharedData.skills, totalSP: sharedTotalSP }));
+		page.appendChild(renderSharedCharSkills({
+			queue: sharedData.queue,
+			skills: sharedData.skills,
+			totalSP: sharedTotalSP,
+			hasSharedTotalSP: encodedTotalSP !== ''
+		}));
 	} catch (err) {
 		const alert = document.createElement('div');
 		alert.className = 'sq-alert';
@@ -1304,6 +1527,7 @@ async function renderCharacterPage(charName, tab = 'overview') {
 	const nextActions = activeTab === 'overview' ? renderCharacterShareControls({
 		character: data.character,
 		skills: data.skills || [],
+		queue: data.queue || [],
 		totalSP: data.totalSP || 0,
 		lastUpdatedAt: data.lastUpdatedAt || null
 	}) : null;
