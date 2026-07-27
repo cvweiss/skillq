@@ -14,6 +14,9 @@ SkillQ lets you monitor all your EVE Online characters in one place from any bro
 - **Skill overview**: browse every trained skill grouped by category, with queue and training-in-progress highlights
 - **Skill queue**: see the full active queue with finish times and SP/hour rates
 - **Training advisor**: ranked list of skills to train next based on your current attributes and implants
+- **Optimize section (Train tab)**: per-character neural remap recommendations shown next to Implants, calculated from your active queue, attributes, implants, and current skill SP state
+- **Booster detection and badges**: improved booster inference with queue row badges for affected skills and character-level booster status in header/card views
+- **Queue expiry badges**: highlights for queue ending within 24 hours, ending within 7 days, and recent no-active-training states
 - **Wallet journal**: recent wallet transactions with party name resolution
 - **Character groups and ordering**: organise characters into named groups and sort by SP, ISK, queue finish time, or a custom order
 - **Shareable character links**: generate a signed, compressed share URL that lets anyone view a snapshot of your skills and queue (automatically invalidates if you change corporations)

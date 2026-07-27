@@ -51,8 +51,8 @@ const SHARE_SECTION_KEYS = {
 	totalSkillPoints: 'totalSkillPoints',
 	walletBalance: 'walletBalance'
 };
-let githubhash = "8ff6010";
-const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '8ff6010';
+let githubhash = "1c999a3";
+const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '1c999a3';
 let layoutMode = 'restricted';
 let themeMode = 'dark';
 
