@@ -682,14 +682,17 @@ function renderCharWallet({ transactions = [] } = {}) {
 
 /* ─── Character Train (implants + suggestions) ───────────────────────────────
  *
- * renderCharTrain({ implants, suggestions })
+ * renderCharTrain({ implants, suggestions, optimize })
  *
  * implants: [{ attributeName, baseValue, bonus, implantName }]
  * suggestions: [{ typeName, typeID, level, time, primaryAttribute,
  *                 secondaryAttribute, skillPoints, training, queue }]
+ * optimize: { rows, sampleSize, currentSeconds, optimizedSeconds, savedSeconds, savedPercent }
  */
-function renderCharTrain({ implants = [], suggestions = [] } = {}) {
+function renderCharTrain({ implants = [], suggestions = [], optimize = null } = {}) {
 	const el = _el('div', 'sq-train');
+
+	const topPanels = _el('div', 'sq-train-top-panels');
 
 	/* ── Implants ── */
 	if (implants.length > 0) {
@@ -710,7 +713,68 @@ function renderCharTrain({ implants = [], suggestions = [] } = {}) {
 		}
 		table.appendChild(tbody);
 		section.appendChild(table);
-		el.appendChild(section);
+		topPanels.appendChild(section);
+	}
+
+	/* ── Optimize ── */
+	const optimizeSection = _el('section', 'sq-optimize');
+	optimizeSection.appendChild(_el('h4', 'sq-section-title', 'Optimize'));
+	if (Array.isArray(optimize?.rows) && optimize.rows.length > 0) {
+		const table = document.createElement('table');
+		table.className = 'sq-table sq-table--compact';
+		const thead = document.createElement('thead');
+		thead.innerHTML = '<tr><th>Attribute</th><th>Current</th><th>Optimized</th><th>Delta</th></tr>';
+		const tbody = document.createElement('tbody');
+
+		for (const row of optimize.rows) {
+			const tr = document.createElement('tr');
+			const deltaPrefix = Number(row.deltaPoints || 0) > 0 ? '+' : '';
+			tr.innerHTML = `
+				<td>${capitalizeFirst(row.attributeName)}</td>
+				<td>${Number(row.currentPoints || 0)} pts <em>(${Number(row.currentValue || 0)})</em></td>
+				<td>${Number(row.optimizedPoints || 0)} pts <em>(${Number(row.optimizedValue || 0)})</em></td>
+				<td>${deltaPrefix}${Number(row.deltaPoints || 0)}</td>
+			`;
+			tbody.appendChild(tr);
+		}
+
+		table.appendChild(thead);
+		table.appendChild(tbody);
+		optimizeSection.appendChild(table);
+
+		const savedSeconds = Number(optimize?.savedSeconds || 0);
+		const savedPercent = Number(optimize?.savedPercent || 0);
+		const sampleSize = Number(optimize?.sampleSize || 0);
+		if (savedSeconds > 0) {
+			optimizeSection.appendChild(_el(
+				'p',
+				'sq-muted sq-optimize-summary',
+				`Estimated savings: ${formatDuration(Math.round(savedSeconds))} (${savedPercent.toFixed(1)}%) across ${sampleSize} candidate skills.`
+			));
+		} else {
+			optimizeSection.appendChild(_el(
+				'p',
+				'sq-muted sq-optimize-summary',
+				`Current remap is already near-optimal for ${sampleSize} candidate skills.`
+			));
+		}
+		optimizeSection.appendChild(_el(
+			'p',
+			'sq-muted sq-optimize-summary',
+			'Assumes Omega training rates and uses Neural remap limits (17-27 per attribute, 14 remap points). Remap cooldown and availability are not modeled.'
+		));
+		optimizeSection.appendChild(_el(
+			'p',
+			'sq-muted sq-optimize-summary',
+			'Recommended: use remap optimization only when planning at least one year of focused training.'
+		));
+	} else {
+		optimizeSection.appendChild(_el('p', 'sq-muted sq-optimize-summary', 'Optimization data is refreshing.'));
+	}
+	topPanels.appendChild(optimizeSection);
+
+	if (topPanels.childElementCount > 0) {
+		el.appendChild(topPanels);
 	}
 
 	/* ── Skill Suggestions ── */

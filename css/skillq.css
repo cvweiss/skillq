@@ -1214,6 +1214,15 @@ text-align: left;
 ═══════════════════════════════════════════════════════════════ */
 .sq-train { padding: 0.75rem; }
 .sq-implants { margin-bottom: 1.5rem; }
+.sq-optimize { margin-bottom: 1.5rem; }
+.sq-optimize-summary { margin-top: 0.45rem; }
+.sq-train-top-panels {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+	align-items: start;
+}
+.sq-train-top-panels .sq-section-title { margin-top: 0; }
 
 /* ═══════════════════════════════════════════════════════════════
    RESPONSIVE
@@ -1287,6 +1296,7 @@ text-align: left;
 	.sq-skills,
 	.sq-wallet,
 	.sq-train { padding: 0.5rem; }
+	.sq-train-top-panels { grid-template-columns: 1fr; gap: 0.75rem; }
 	.sq-alert { margin: 0.5rem; padding: 0.55rem 0.65rem; }
 	.sq-char-note { padding: 0 0.5rem 0.5rem; }
 	.sq-manage { padding: 0.6rem; }
