@@ -271,7 +271,7 @@ function renderCharCard({ character, training = null } = {}) {
 			info.appendChild(countdown);
 		}
 
-		if (training.hasTrainingBooster) {
+		if (training.hasTrainingBooster || training.hasCharacterBooster) {
 			const boosterWrap = _el('div', 'sq-char-card__booster');
 			boosterWrap.appendChild(_boosterBadge('Booster'));
 			info.appendChild(boosterWrap);
@@ -356,7 +356,7 @@ function renderCharInfo({ character, corporation = null, alliance = null, traini
 			countdown.dataset.until = training.trainingEndMs;
 			details.appendChild(countdown);
 		}
-		if (training.hasTrainingBooster) {
+		if (training.hasTrainingBooster || training.hasCharacterBooster) {
 			const boosterWrap = _el('div', 'sq-char-info__booster');
 			boosterWrap.appendChild(_boosterBadge('Booster'));
 			details.appendChild(boosterWrap);
