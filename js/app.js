@@ -50,8 +50,8 @@ const SHARE_SECTION_KEYS = {
 	totalSkillPoints: 'totalSkillPoints',
 	walletBalance: 'walletBalance'
 };
-let githubhash = "0ef0803";
-const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '0ef0803';
+let githubhash = "27eaff0";
+const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '27eaff0';
 let layoutMode = 'restricted';
 let themeMode = 'dark';
 
@@ -1648,7 +1648,11 @@ function buildCharacterTabContent(data, activeTab) {
 	}
 
 	if (activeTab === 'train') {
-		content.appendChild(renderCharTrain({ implants: data.implants || [], suggestions: data.suggestions || [] }));
+		content.appendChild(renderCharTrain({
+			implants: data.implants || [],
+			suggestions: data.suggestions || [],
+			optimize: data.optimize || null
+		}));
 		if (data.lastUpdatedAt) {
 			const updated = document.createElement('p');
 			updated.className = 'sq-muted sq-char-note';
@@ -3144,9 +3148,10 @@ async function loadCharacterPageDataFromCache(characterId, tab) {
 			const overviewCached = await cacheGetCharacterData(`overview:${characterId}`);
 			applyOverviewTrainingToCommonData(data, overviewCached?.queue || []);
 		}
-		const trainData = (await cacheGetCharacterData(`train:${characterId}`)) || { implants: [], suggestions: [], updatedAt: 0 };
+		const trainData = (await cacheGetCharacterData(`train:${characterId}`)) || { implants: [], suggestions: [], optimize: null, updatedAt: 0 };
 		data.implants = trainData.implants;
 		data.suggestions = trainData.suggestions;
+		data.optimize = trainData.optimize || null;
 		latestUpdatedAt = Math.max(latestUpdatedAt, Number(trainData.updatedAt || 0));
 		data.lastUpdatedAt = latestUpdatedAt || null;
 		return data;
@@ -3209,7 +3214,11 @@ async function isCharacterPageDataMissing(characterId) {
 		cacheGetCharacterData(`train:${characterId}`),
 		cacheGetCharacterData(`overview:${characterId}`)
 	]);
-	return !common || !wallet || !train || !overview;
+	const missingTrainOptimize = Boolean(train)
+		&& Array.isArray(train?.suggestions)
+		&& train.suggestions.length > 0
+		&& !Object.prototype.hasOwnProperty.call(train || {}, 'optimize');
+	return !common || !wallet || !train || !overview || missingTrainOptimize;
 }
 
 async function refreshCharacterSummaryInBackground(characterId, characterName) {
@@ -3343,6 +3352,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 		cachedCommonTrainingEndMs > 0 && cachedCommonTrainingEndMs <= Date.now() ? cachedCommonTrainingEndMs : 0
 	);
 	const cachedOverview = await cacheGetCharacterData(`overview:${characterId}`);
+	const cachedTrain = await cacheGetCharacterData(`train:${characterId}`);
 	const missingTrainingLevel = Boolean(cachedCommon?.training?.typeName)
 		&& !Number(cachedCommon?.training?.level || 0);
 	const missingTrainingBoosterFlag = Boolean(cachedCommon?.training?.typeName)
@@ -3351,12 +3361,15 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 		&& !Object.prototype.hasOwnProperty.call(cachedCommon?.training || {}, 'hasCharacterBooster');
 	const missingOverviewBoosterFlags = Array.isArray(cachedOverview?.queue)
 		&& cachedOverview.queue.some((row) => !Object.prototype.hasOwnProperty.call(row || {}, 'hasTrainingBooster'));
+	const missingTrainOptimize = Array.isArray(cachedTrain?.suggestions)
+		&& cachedTrain.suggestions.length > 0
+		&& !Object.prototype.hasOwnProperty.call(cachedTrain || {}, 'optimize');
 	const finishedTraining = hasTrainingCompleted(cachedCommon?.training);
 	const shouldRefreshCommon = await shouldRefreshCharacterData(commonKey);
 	const shouldRefreshWallet = await shouldRefreshCharacterData(`wallet:${characterId}`);
 	const shouldRefreshTrain = await shouldRefreshCharacterData(`train:${characterId}`);
 	const shouldRefreshOverview = await shouldRefreshCharacterData(`overview:${characterId}`);
-	if (!shouldRefreshCommon && !missingTrainingLevel && !missingTrainingBoosterFlag && !missingCharacterBoosterFlag && !missingOverviewBoosterFlags && !finishedTraining) {
+	if (!shouldRefreshCommon && !missingTrainingLevel && !missingTrainingBoosterFlag && !missingCharacterBoosterFlag && !missingOverviewBoosterFlags && !missingTrainOptimize && !finishedTraining) {
 		if (tab === 'wallet' && !shouldRefreshWallet) return;
 		if (tab === 'train' && !shouldRefreshTrain) return;
 		if (tab === 'overview' && !shouldRefreshOverview) return;
@@ -3380,7 +3393,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 		}
 
 		if (tab === 'train') {
-			if (!shouldRefreshTrain) return;
+			if (!shouldRefreshTrain && !missingTrainOptimize) return;
 			const train = await fetchTrainingSuggestions(characterId);
 			train.updatedAt = Date.now();
 			await cacheSetCharacterData(`train:${characterId}`, train)
@@ -3403,7 +3416,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 				|| await cacheTouchCharacterData(`wallet:${characterId}`);
 		}
 
-		if (shouldRefreshTrain) {
+		if (shouldRefreshTrain || missingTrainOptimize) {
 			const train = await fetchTrainingSuggestions(characterId);
 			train.updatedAt = Date.now();
 			await cacheSetCharacterData(`train:${characterId}`, train)
@@ -3981,8 +3994,8 @@ async function fetchTrainingSuggestions(characterId) {
 			implantName: implantByAttribute[attributeName]?.implantName || ''
 		})).filter((row) => row.baseValue > 0 || row.implantName);
 
-		const suggestions = await buildTrainingSuggestions(skillsResponse?.skills || [], attributes);
-		return { implants: attributeRows, suggestions };
+		const { suggestions, optimize } = await buildTrainingSuggestions(skillsResponse?.skills || [], attributes, implantByAttribute);
+		return { implants: attributeRows, suggestions, optimize };
 	} catch (err) {
 		if (await handleCharacterRefreshTokenError(err, characterId)) {
 			throw err;
@@ -4029,22 +4042,26 @@ function buildAttributeImplantMap(implantInfos = []) {
 	return bestByAttribute;
 }
 
-async function buildTrainingSuggestions(skills, attributes) {
+async function buildTrainingSuggestions(skills, attributes, implantByAttribute = null) {
 	const candidates = skills.filter((skill) => Number(skill.trained_skill_level ?? 0) < 5).slice(0, 25);
 	const typeInfos = new Map(await Promise.all(candidates.map(async (row) => [row.skill_id, await getTypeInfo(row.skill_id)])));
 	const suggestions = [];
+	const optimizationCandidates = [];
 
 	for (const row of candidates) {
 		const typeInfo = typeInfos.get(row.skill_id);
 		const dogma = new Map((typeInfo?.dogma_attributes || []).map((attr) => [attr.attribute_id, attr.value]));
 		const primaryAttribute = attributeIdToName(dogma.get(180));
 		const secondaryAttribute = attributeIdToName(dogma.get(181));
+		if (!primaryAttribute || !secondaryAttribute) continue;
 		const rank = Number(dogma.get(275) || 1);
 		const currentLevel = Number(row.trained_skill_level || 0);
 		const currentSp = Number(row.skillpoints_in_skill || 0);
 		const targetSp = getSkillPointsForLevel(5, rank);
 		const remainingSp = Math.max(0, targetSp - currentSp);
+		if (remainingSp <= 0) continue;
 		const spPerHour = calculateSkillSpPerHour(attributes, primaryAttribute, secondaryAttribute);
+		const remainingSeconds = spPerHour > 0 ? Math.ceil((remainingSp / spPerHour) * 3600) : Number.MAX_SAFE_INTEGER;
 		suggestions.push({
 			typeName: typeInfo?.name || `Skill ${row.skill_id}`,
 			typeID: row.skill_id,
@@ -4055,11 +4072,18 @@ async function buildTrainingSuggestions(skills, attributes) {
 			skillPoints: currentSp,
 			training: 0,
 			queue: 0,
-			remainingSeconds: spPerHour > 0 ? Math.ceil(remainingSp / spPerHour * 3600) : Number.MAX_SAFE_INTEGER
+			remainingSeconds
+		});
+		optimizationCandidates.push({
+			primaryAttribute,
+			secondaryAttribute,
+			remainingSp
 		});
 	}
 
-	return suggestions.sort((a, b) => a.remainingSeconds - b.remainingSeconds).slice(0, 20);
+	const topSuggestions = suggestions.sort((a, b) => a.remainingSeconds - b.remainingSeconds).slice(0, 20);
+	const optimize = optimizeAttributeRemap(optimizationCandidates, attributes, implantByAttribute || {});
+	return { suggestions: topSuggestions, optimize };
 }
 
 async function getTypeInfo(typeId) {
@@ -4396,6 +4420,156 @@ function calculateSkillSpPerHour(attributes, primaryAttribute, secondaryAttribut
 	const secondary = Number(attributes?.[secondaryAttribute] || 0);
 	if (primary <= 0) return 0;
 	return (primary + (secondary / 2)) * 60;
+}
+
+const TRAINING_ATTRIBUTE_NAMES = ['charisma', 'intelligence', 'memory', 'perception', 'willpower'];
+let cachedValidRemaps = null;
+
+function optimizeAttributeRemap(candidates, attributes, implantByAttribute = {}) {
+	const knownAttributeTotal = TRAINING_ATTRIBUTE_NAMES.reduce((sum, name) => sum + Math.max(0, Number(attributes?.[name] || 0)), 0);
+	if (knownAttributeTotal <= 0) return null;
+
+	const filteredCandidates = (Array.isArray(candidates) ? candidates : []).filter((row) => {
+		if (!row) return false;
+		if (!TRAINING_ATTRIBUTE_NAMES.includes(row.primaryAttribute) || !TRAINING_ATTRIBUTE_NAMES.includes(row.secondaryAttribute)) return false;
+		return Number(row.remainingSp || 0) > 0;
+	});
+	if (!filteredCandidates.length) return null;
+
+	const implantBonus = {};
+	for (const name of TRAINING_ATTRIBUTE_NAMES) {
+		implantBonus[name] = Math.max(0, Number(implantByAttribute?.[name]?.bonus || 0));
+	}
+
+	const remapConfigs = enumerateValidRemaps();
+	const currentRemap = projectAttributesToRemap(attributes, implantBonus, remapConfigs);
+	const currentEffective = addImplantBonusToRemap(currentRemap, implantBonus);
+
+	let bestRemap = remapConfigs[0] || currentRemap;
+	let bestSeconds = Number.POSITIVE_INFINITY;
+	for (const remap of remapConfigs) {
+		const effective = addImplantBonusToRemap(remap, implantBonus);
+		const seconds = estimateTrainingSecondsForCandidates(filteredCandidates, effective);
+		if (seconds < bestSeconds) {
+			bestSeconds = seconds;
+			bestRemap = remap;
+		}
+	}
+
+	const currentSeconds = estimateTrainingSecondsForCandidates(filteredCandidates, currentEffective);
+	const savedSeconds = Number.isFinite(currentSeconds) && Number.isFinite(bestSeconds)
+		? Math.max(0, currentSeconds - bestSeconds)
+		: 0;
+	const savedPercent = currentSeconds > 0 ? (savedSeconds / currentSeconds) * 100 : 0;
+
+	const rows = TRAINING_ATTRIBUTE_NAMES.map((attributeName) => {
+		const currentPoints = Math.max(0, Number(currentRemap[attributeName] || 17) - 17);
+		const optimizedPoints = Math.max(0, Number(bestRemap[attributeName] || 17) - 17);
+		return {
+			attributeName,
+			currentPoints,
+			optimizedPoints,
+			deltaPoints: optimizedPoints - currentPoints,
+			currentValue: Number(currentEffective[attributeName] || 0),
+			optimizedValue: Number((bestRemap[attributeName] || 0) + implantBonus[attributeName])
+		};
+	});
+
+	return {
+		rows,
+		sampleSize: filteredCandidates.length,
+		currentSeconds: Number.isFinite(currentSeconds) ? currentSeconds : 0,
+		optimizedSeconds: Number.isFinite(bestSeconds) ? bestSeconds : 0,
+		savedSeconds,
+		savedPercent
+	};
+}
+
+function enumerateValidRemaps() {
+	if (cachedValidRemaps) return cachedValidRemaps;
+	const remaps = [];
+	for (let charismaPoints = 0; charismaPoints <= 10; charismaPoints += 1) {
+		for (let intelligencePoints = 0; intelligencePoints <= 10; intelligencePoints += 1) {
+			for (let memoryPoints = 0; memoryPoints <= 10; memoryPoints += 1) {
+				for (let perceptionPoints = 0; perceptionPoints <= 10; perceptionPoints += 1) {
+					const spent = charismaPoints + intelligencePoints + memoryPoints + perceptionPoints;
+					if (spent > 14) continue;
+					const willpowerPoints = 14 - spent;
+					if (willpowerPoints > 10) continue;
+					remaps.push({
+						charisma: 17 + charismaPoints,
+						intelligence: 17 + intelligencePoints,
+						memory: 17 + memoryPoints,
+						perception: 17 + perceptionPoints,
+						willpower: 17 + willpowerPoints
+					});
+				}
+			}
+		}
+	}
+	cachedValidRemaps = remaps;
+	return remaps;
+}
+
+function projectAttributesToRemap(attributes, implantBonus, remapConfigs) {
+	const raw = {};
+	for (const name of TRAINING_ATTRIBUTE_NAMES) {
+		raw[name] = Math.max(0, Number(attributes?.[name] || 0));
+	}
+
+	const rawTotal = TRAINING_ATTRIBUTE_NAMES.reduce((sum, name) => sum + raw[name], 0);
+	const bonusTotal = TRAINING_ATTRIBUTE_NAMES.reduce((sum, name) => sum + Math.max(0, Number(implantBonus?.[name] || 0)), 0);
+	const rawMinusBonusTotal = rawTotal - bonusTotal;
+	const rawDistance = Math.abs(rawTotal - 99);
+	const minusDistance = Math.abs(rawMinusBonusTotal - 99);
+	const includesImplants = bonusTotal > 0 && minusDistance <= rawDistance;
+
+	const targetRemap = {};
+	for (const name of TRAINING_ATTRIBUTE_NAMES) {
+		const source = raw[name] - (includesImplants ? Math.max(0, Number(implantBonus?.[name] || 0)) : 0);
+		targetRemap[name] = Math.max(17, Math.min(27, source || 17));
+	}
+
+	let best = remapConfigs[0] || {
+		charisma: 17,
+		intelligence: 17,
+		memory: 17,
+		perception: 17,
+		willpower: 17
+	};
+	let bestDistance = Number.POSITIVE_INFINITY;
+	for (const remap of remapConfigs) {
+		let distance = 0;
+		for (const name of TRAINING_ATTRIBUTE_NAMES) {
+			const delta = Number(remap[name] || 17) - Number(targetRemap[name] || 17);
+			distance += delta * delta;
+		}
+		if (distance < bestDistance) {
+			bestDistance = distance;
+			best = remap;
+		}
+	}
+
+	return best;
+}
+
+function addImplantBonusToRemap(remap, implantBonus) {
+	const effective = {};
+	for (const name of TRAINING_ATTRIBUTE_NAMES) {
+		effective[name] = Number(remap?.[name] || 0) + Math.max(0, Number(implantBonus?.[name] || 0));
+	}
+	return effective;
+}
+
+function estimateTrainingSecondsForCandidates(candidates, effectiveAttributes) {
+	let totalSeconds = 0;
+	for (const row of candidates) {
+		const spPerHour = calculateSkillSpPerHour(effectiveAttributes, row.primaryAttribute, row.secondaryAttribute);
+		if (spPerHour <= 0) continue;
+		totalSeconds += (Number(row.remainingSp || 0) / spPerHour) * 3600;
+	}
+	if (!Number.isFinite(totalSeconds)) return Number.POSITIVE_INFINITY;
+	return Math.max(0, totalSeconds);
 }
 
 function getQueueRowTrainingRateContext(queueRow, typeInfo, attributes) {
