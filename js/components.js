@@ -749,13 +749,13 @@ function renderCharTrain({ implants = [], suggestions = [], optimize = null } = 
 			optimizeSection.appendChild(_el(
 				'p',
 				'sq-muted sq-optimize-summary',
-				`Estimated savings: ${formatDuration(Math.round(savedSeconds))} (${savedPercent.toFixed(1)}%) across ${sampleSize} candidate skills.`
+				`Estimated savings: ${formatDuration(Math.round(savedSeconds))} (${savedPercent.toFixed(1)}%) across ${sampleSize} queued skills.`
 			));
 		} else {
 			optimizeSection.appendChild(_el(
 				'p',
 				'sq-muted sq-optimize-summary',
-				`Current remap is already near-optimal for ${sampleSize} candidate skills.`
+				`Current remap is already near-optimal for ${sampleSize} queued skills.`
 			));
 		}
 		optimizeSection.appendChild(_el(
@@ -769,7 +769,7 @@ function renderCharTrain({ implants = [], suggestions = [], optimize = null } = 
 			'Recommended: use remap optimization only when planning at least one year of focused training.'
 		));
 	} else {
-		optimizeSection.appendChild(_el('p', 'sq-muted sq-optimize-summary', 'Optimization data is refreshing.'));
+		optimizeSection.appendChild(_el('p', 'sq-muted sq-optimize-summary', 'No queued skills available for optimization.'));
 	}
 	topPanels.appendChild(optimizeSection);
 
