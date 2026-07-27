@@ -3292,15 +3292,16 @@ async function refreshCharacterSummaryInBackground(characterId, characterName) {
 				const trainingRate = getQueueRowTrainingRateContext(active, typeInfo, baselineAttributes);
 				const trainingStartMs = active?.start_date ? (Date.parse(active.start_date) || 0) : 0;
 				const trainingEndMs = active?.finish_date ? (Date.parse(active.finish_date) || 0) : 0;
+				const isCurrentlyTraining = trainingStartMs > 0 && trainingEndMs > now && trainingStartMs <= now;
 				training = {
 					typeName: typeInfo?.name || null,
 					level: Number(active?.finished_level || 0),
 					trainingStartMs,
 					trainingEndMs,
 					queueEmptyMs,
-					isCurrentlyTraining: trainingStartMs > 0 && trainingEndMs > now && trainingStartMs <= now,
+					isCurrentlyTraining,
 					lastTrainingEndMs,
-					hasTrainingBooster: trainingRate.hasTrainingBooster,
+					hasTrainingBooster: trainingRate.hasTrainingBooster || (isCurrentlyTraining && hasCharacterBooster),
 					hasCharacterBooster
 				};
 			} else if (lastTrainingEndMs > 0) {
@@ -3364,8 +3365,13 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 		&& !Object.prototype.hasOwnProperty.call(cachedCommon?.training || {}, 'hasTrainingBooster');
 	const missingCharacterBoosterFlag = Boolean(cachedCommon?.training?.typeName)
 		&& !Object.prototype.hasOwnProperty.call(cachedCommon?.training || {}, 'hasCharacterBooster');
-	const missingOverviewBoosterFlags = Array.isArray(cachedOverview?.queue)
+	const overviewMissingBoosterFlagShape = Array.isArray(cachedOverview?.queue)
 		&& cachedOverview.queue.some((row) => !Object.prototype.hasOwnProperty.call(row || {}, 'hasTrainingBooster'));
+	const overviewNeedsBoosterRecalc = Boolean(cachedCommon?.training?.hasCharacterBooster)
+		&& Array.isArray(cachedOverview?.queue)
+		&& cachedOverview.queue.length > 0
+		&& !cachedOverview.queue.some((row) => Boolean(row?.hasTrainingBooster));
+	const missingOverviewBoosterFlags = overviewMissingBoosterFlagShape || overviewNeedsBoosterRecalc;
 	const missingTrainOptimize = Array.isArray(cachedTrain?.suggestions)
 		&& cachedTrain.suggestions.length > 0
 		&& !Object.prototype.hasOwnProperty.call(cachedTrain || {}, 'optimize');
@@ -3649,15 +3655,16 @@ async function fetchCharacterCommonData(characterId, fallbackLastTrainingEndMs =
 				const trainingRate = getQueueRowTrainingRateContext(active, typeInfo, baselineAttributes);
 				const activeStartMs = active?.start_date ? (Date.parse(active.start_date) || 0) : 0;
 				const activeEndMs = active?.finish_date ? (Date.parse(active.finish_date) || 0) : 0;
+				const isCurrentlyTraining = activeStartMs > 0 && activeEndMs > now && activeStartMs <= now;
 				training = {
 					typeName: typeInfo?.name || `Skill ${active.skill_id}`,
 					level: Number(active.finished_level || 0),
 					trainingStartMs: activeStartMs,
 					trainingEndMs: activeEndMs,
 					queueEmptyMs,
-					isCurrentlyTraining: activeStartMs > 0 && activeEndMs > now && activeStartMs <= now,
+					isCurrentlyTraining,
 					lastTrainingEndMs,
-					hasTrainingBooster: trainingRate.hasTrainingBooster,
+					hasTrainingBooster: trainingRate.hasTrainingBooster || (isCurrentlyTraining && hasCharacterBooster),
 					hasCharacterBooster
 				};
 			} else if (lastTrainingEndMs > 0) {
@@ -3748,7 +3755,7 @@ async function fetchSkillsOverview(characterId) {
 		buildAttributeImplantMap(implantInfos);
 		const inferredAttributeOffset = inferGlobalAttributeOffset(queue, typeInfos, attributes);
 		const baselineAttributes = subtractGlobalAttributeOffset(attributes, inferredAttributeOffset);
-		const hasCharacterBooster = inferredAttributeOffset > 0;
+		const hasCharacterBooster = inferredAttributeOffset > 0 || await inferQueueHasBooster(queue, baselineAttributes, typeInfos);
 
 		const queueRows = queue.map((row) => {
 			const typeInfo = typeInfos.get(row.skill_id);
@@ -3778,11 +3785,36 @@ async function fetchSkillsOverview(characterId) {
 				endDate: row.finish_date || null,
 				spHour: trainingRate.actualSpHour,
 				expectedSpHour: trainingRate.expectedSpHour,
-				hasTrainingBooster: trainingRate.hasTrainingBooster,
-				hasCharacterBooster,
+				hasTrainingBooster: trainingRate.hasTrainingBooster || (isActive && hasCharacterBooster),
+				hasCharacterBooster: isActive && hasCharacterBooster,
 				spNeeded
 			};
 		});
+
+		const pairMinSpHour = new Map();
+		for (const row of queueRows) {
+			const primary = String(row?.primaryAttribute || '');
+			const secondary = String(row?.secondaryAttribute || '');
+			if (!primary || !secondary) continue;
+			const key = `${primary}|${secondary}`;
+			const spHour = Number(row?.spHour || 0);
+			if (spHour <= 0) continue;
+			const currentMin = Number(pairMinSpHour.get(key) || 0);
+			if (currentMin <= 0 || spHour < currentMin) {
+				pairMinSpHour.set(key, spHour);
+			}
+		}
+
+		for (const row of queueRows) {
+			const primary = String(row?.primaryAttribute || '');
+			const secondary = String(row?.secondaryAttribute || '');
+			if (!primary || !secondary) continue;
+			const key = `${primary}|${secondary}`;
+			const minSpHour = Number(pairMinSpHour.get(key) || 0);
+			const spHour = Number(row?.spHour || 0);
+			const inferredPairBooster = minSpHour > 0 && (spHour - minSpHour) > 45;
+			row.hasTrainingBooster = Boolean(row.hasTrainingBooster || inferredPairBooster);
+		}
 
 		const maxQueuedLevels = new Map();
 		const activeQueueRow = pickCurrentOrNextQueueRow(queue);
@@ -3899,7 +3931,7 @@ function applyOverviewTrainingToCommonData(data, queueRows) {
 	const now = Date.now();
 	const nextEntry = pickCurrentOrNextOverviewQueueEntry(rows);
 	const queueEmptyMs = Math.max(0, ...rows.map((row) => (row?.endDate ? (Date.parse(row.endDate) || 0) : 0)));
-	const hasCharacterBooster = rows.some((row) => Boolean(row?.hasTrainingBooster));
+	const hasCharacterBooster = rows.some((row) => Boolean(row?.hasCharacterBooster || row?.hasTrainingBooster));
 	const latestQueueTrainingEndMs = Math.max(0, ...rows.map((row) => {
 		const endMs = row?.endDate ? (Date.parse(row.endDate) || 0) : 0;
 		return endMs > 0 && endMs <= now ? endMs : 0;
