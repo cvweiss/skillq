@@ -50,8 +50,8 @@ const SHARE_SECTION_KEYS = {
 	totalSkillPoints: 'totalSkillPoints',
 	walletBalance: 'walletBalance'
 };
-let githubhash = "9b9cabc";
-const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '9b9cabc';
+let githubhash = "0ef0803";
+const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '0ef0803';
 let layoutMode = 'restricted';
 let themeMode = 'dark';
 
@@ -1263,6 +1263,7 @@ async function renderSharedCharacterPage() {
 		const decodedRecords = await decodeShareSkillsPayload(encodedSkills);
 		const sharedData = await hydrateSharedSkills(decodedRecords);
 		const trainingSummary = findSharedTrainingSummary(sharedData.queue);
+		const now = Date.now();
 		const sharedCharacter = {
 			...shareContext.character,
 			balance: hasSharedBalance ? sharedBalance : 0
@@ -1278,7 +1279,11 @@ async function renderSharedCharacterPage() {
 			training: trainingSummary ? {
 				typeName: trainingSummary.typeName,
 				level: trainingSummary.targetLevel || 0,
+				trainingStartMs: Number(trainingSummary.trainingStartMs || 0),
 				trainingEndMs: trainingSummary.trainingEndMs,
+				isCurrentlyTraining: Number(trainingSummary.trainingStartMs || 0) > 0
+					&& Number(trainingSummary.trainingEndMs || 0) > now
+					&& Number(trainingSummary.trainingStartMs || 0) <= now,
 				queueEmptyMs
 			} : null,
 			showBalance: hasSharedBalance
@@ -1618,8 +1623,11 @@ function buildCharacterInfoSignature(data) {
 		training: {
 			typeName: String(data?.training?.typeName || ''),
 			level: Number(data?.training?.level || 0),
+			trainingStartMs: Number(data?.training?.trainingStartMs || 0),
 			trainingEndMs: Number(data?.training?.trainingEndMs || 0),
 			queueEmptyMs: Number(data?.training?.queueEmptyMs || 0),
+			isCurrentlyTraining: Boolean(data?.training?.isCurrentlyTraining),
+			lastTrainingEndMs: Number(data?.training?.lastTrainingEndMs || 0),
 			hasTrainingBooster: Boolean(data?.training?.hasTrainingBooster),
 			hasCharacterBooster: Boolean(data?.training?.hasCharacterBooster)
 		}
@@ -3207,6 +3215,11 @@ async function isCharacterPageDataMissing(characterId) {
 async function refreshCharacterSummaryInBackground(characterId, characterName) {
 	const summaryKey = `summary:${characterId}`;
 	const cachedSummary = await cacheGetCharacterData(summaryKey);
+	const cachedSummaryTrainingEndMs = Number(cachedSummary?.training?.trainingEndMs || 0);
+	const cachedLastTrainingEndMs = Math.max(
+		Number(cachedSummary?.training?.lastTrainingEndMs || 0),
+		cachedSummaryTrainingEndMs > 0 && cachedSummaryTrainingEndMs <= Date.now() ? cachedSummaryTrainingEndMs : 0
+	);
 	const missingTrainingLevel = Boolean(cachedSummary?.training?.typeName)
 		&& !Number(cachedSummary?.training?.level || 0);
 	const missingCharacterBoosterFlag = Boolean(cachedSummary?.training?.typeName)
@@ -3241,26 +3254,66 @@ async function refreshCharacterSummaryInBackground(characterId, characterName) {
 
 		let training = null;
 		if (Array.isArray(queue) && queue.length > 0) {
-			const active = pickCurrentOrNextQueueRow(queue);
+			const now = Date.now();
+			const activeQueueRow = queue.find((row) => {
+				const startMs = row?.start_date ? Date.parse(row.start_date) : 0;
+				const endMs = row?.finish_date ? Date.parse(row.finish_date) : 0;
+				return startMs > 0 && endMs > now && startMs <= now;
+			});
+			const active = activeQueueRow || pickCurrentOrNextQueueRow(queue);
 			const typeInfos = new Map(await Promise.all(
 				queue.map(async (row) => [Number(row?.skill_id || 0), await getTypeInfo(row?.skill_id)])
 			));
 			const inferredAttributeOffset = inferGlobalAttributeOffset(queue, typeInfos, attr);
 			const baselineAttributes = subtractGlobalAttributeOffset(attr, inferredAttributeOffset);
 			const hasCharacterBooster = inferredAttributeOffset > 0 || await inferQueueHasBooster(queue, baselineAttributes, typeInfos);
+			const queueEmptyMs = Math.max(0, ...queue.map((row) => (row?.finish_date ? (Date.parse(row.finish_date) || 0) : 0)));
+			const latestQueueTrainingEndMs = Math.max(0, ...queue.map((row) => {
+				const endMs = row?.finish_date ? (Date.parse(row.finish_date) || 0) : 0;
+				return endMs > 0 && endMs <= now ? endMs : 0;
+			}));
+			const lastTrainingEndMs = Math.max(cachedLastTrainingEndMs, latestQueueTrainingEndMs);
 			if (active) {
-				const queueEmptyMs = Math.max(0, ...queue.map((row) => (row?.finish_date ? (Date.parse(row.finish_date) || 0) : 0)));
 				const typeInfo = await getTypeInfo(active?.skill_id);
 				const trainingRate = getQueueRowTrainingRateContext(active, typeInfo, baselineAttributes);
+				const trainingStartMs = active?.start_date ? (Date.parse(active.start_date) || 0) : 0;
+				const trainingEndMs = active?.finish_date ? (Date.parse(active.finish_date) || 0) : 0;
 				training = {
 					typeName: typeInfo?.name || null,
 					level: Number(active?.finished_level || 0),
-					trainingEndMs: active?.finish_date ? Date.parse(active.finish_date) : 0,
+					trainingStartMs,
+					trainingEndMs,
 					queueEmptyMs,
+					isCurrentlyTraining: trainingStartMs > 0 && trainingEndMs > now && trainingStartMs <= now,
+					lastTrainingEndMs,
 					hasTrainingBooster: trainingRate.hasTrainingBooster,
 					hasCharacterBooster
 				};
+			} else if (lastTrainingEndMs > 0) {
+				training = {
+					typeName: null,
+					level: 0,
+					trainingStartMs: 0,
+					trainingEndMs: 0,
+					queueEmptyMs,
+					isCurrentlyTraining: false,
+					lastTrainingEndMs,
+					hasTrainingBooster: false,
+					hasCharacterBooster
+				};
 			}
+		} else if (cachedLastTrainingEndMs > 0) {
+			training = {
+				typeName: null,
+				level: 0,
+				trainingStartMs: 0,
+				trainingEndMs: 0,
+				queueEmptyMs: 0,
+				isCurrentlyTraining: false,
+				lastTrainingEndMs: cachedLastTrainingEndMs,
+				hasTrainingBooster: false,
+				hasCharacterBooster: false
+			};
 		}
 
 		await cacheSetCharacterData(`summary:${characterId}`, {
@@ -3284,6 +3337,11 @@ async function refreshCharacterSummaryInBackground(characterId, characterName) {
 async function refreshCharacterPageInBackground(characterId, tab) {
 	const commonKey = `common:${characterId}`;
 	const cachedCommon = await cacheGetCharacterData(commonKey);
+	const cachedCommonTrainingEndMs = Number(cachedCommon?.training?.trainingEndMs || 0);
+	const cachedCommonLastTrainingEndMs = Math.max(
+		Number(cachedCommon?.training?.lastTrainingEndMs || 0),
+		cachedCommonTrainingEndMs > 0 && cachedCommonTrainingEndMs <= Date.now() ? cachedCommonTrainingEndMs : 0
+	);
 	const cachedOverview = await cacheGetCharacterData(`overview:${characterId}`);
 	const missingTrainingLevel = Boolean(cachedCommon?.training?.typeName)
 		&& !Number(cachedCommon?.training?.level || 0);
@@ -3307,7 +3365,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 
 	try {
 		if (missingTrainingLevel || missingTrainingBoosterFlag || missingCharacterBoosterFlag || missingOverviewBoosterFlags || finishedTraining || shouldRefreshCommon) {
-			const common = await fetchCharacterCommonData(characterId);
+			const common = await fetchCharacterCommonData(characterId, cachedCommonLastTrainingEndMs);
 			common.message = null;
 			common.updatedAt = Date.now();
 			await cacheSetCharacterData(commonKey, common) || await cacheTouchCharacterData(commonKey);
@@ -3514,7 +3572,7 @@ async function shouldRefreshCharacterData(key) {
 	return !last || (Date.now() - last) >= CHARACTER_DATA_REFRESH_INTERVAL_MS;
 }
 
-async function fetchCharacterCommonData(characterId) {
+async function fetchCharacterCommonData(characterId, fallbackLastTrainingEndMs = 0) {
 	try {
 		const [charInfo, balance, queue, history, attributes, implants] = await Promise.all([
 			fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}`, characterId),
@@ -3549,26 +3607,66 @@ async function fetchCharacterCommonData(characterId) {
 		const currentCorpHistory = findCurrentCorporationHistoryEntry(history, charInfo?.corporation_id);
 		const corporationJoinDate = currentCorpHistory?.start_date || currentCorpHistory?.record_start_date || '';
 		if (Array.isArray(queue) && queue.length > 0) {
-			const active = pickCurrentOrNextQueueRow(queue);
+			const now = Date.now();
+			const activeQueueRow = queue.find((row) => {
+				const startMs = row?.start_date ? Date.parse(row.start_date) : 0;
+				const endMs = row?.finish_date ? Date.parse(row.finish_date) : 0;
+				return startMs > 0 && endMs > now && startMs <= now;
+			});
+			const active = activeQueueRow || pickCurrentOrNextQueueRow(queue);
 			const typeInfos = new Map(await Promise.all(
 				queue.map(async (row) => [Number(row?.skill_id || 0), await getTypeInfo(row?.skill_id)])
 			));
 			const inferredAttributeOffset = inferGlobalAttributeOffset(queue, typeInfos, attributes);
 			const baselineAttributes = subtractGlobalAttributeOffset(attributes, inferredAttributeOffset);
 			const hasCharacterBooster = inferredAttributeOffset > 0 || await inferQueueHasBooster(queue, baselineAttributes, typeInfos);
+			const queueEmptyMs = Math.max(0, ...queue.map((row) => (row?.finish_date ? (Date.parse(row.finish_date) || 0) : 0)));
+			const latestQueueTrainingEndMs = Math.max(0, ...queue.map((row) => {
+				const endMs = row?.finish_date ? (Date.parse(row.finish_date) || 0) : 0;
+				return endMs > 0 && endMs <= now ? endMs : 0;
+			}));
+			const lastTrainingEndMs = Math.max(Number(fallbackLastTrainingEndMs || 0), latestQueueTrainingEndMs);
 			if (active) {
-				const queueEmptyMs = Math.max(0, ...queue.map((row) => (row?.finish_date ? (Date.parse(row.finish_date) || 0) : 0)));
 				const typeInfo = await getTypeInfo(active.skill_id);
 				const trainingRate = getQueueRowTrainingRateContext(active, typeInfo, baselineAttributes);
+				const activeStartMs = active?.start_date ? (Date.parse(active.start_date) || 0) : 0;
+				const activeEndMs = active?.finish_date ? (Date.parse(active.finish_date) || 0) : 0;
 				training = {
 					typeName: typeInfo?.name || `Skill ${active.skill_id}`,
 					level: Number(active.finished_level || 0),
-					trainingEndMs: active.finish_date ? Date.parse(active.finish_date) : 0,
+					trainingStartMs: activeStartMs,
+					trainingEndMs: activeEndMs,
 					queueEmptyMs,
+					isCurrentlyTraining: activeStartMs > 0 && activeEndMs > now && activeStartMs <= now,
+					lastTrainingEndMs,
 					hasTrainingBooster: trainingRate.hasTrainingBooster,
 					hasCharacterBooster
 				};
+			} else if (lastTrainingEndMs > 0) {
+				training = {
+					typeName: null,
+					level: 0,
+					trainingStartMs: 0,
+					trainingEndMs: 0,
+					queueEmptyMs,
+					isCurrentlyTraining: false,
+					lastTrainingEndMs,
+					hasTrainingBooster: false,
+					hasCharacterBooster
+				};
 			}
+		} else if (Number(fallbackLastTrainingEndMs || 0) > 0) {
+			training = {
+				typeName: null,
+				level: 0,
+				trainingStartMs: 0,
+				trainingEndMs: 0,
+				queueEmptyMs: 0,
+				isCurrentlyTraining: false,
+				lastTrainingEndMs: Number(fallbackLastTrainingEndMs || 0),
+				hasTrainingBooster: false,
+				hasCharacterBooster: false
+			};
 		}
 
 		return {
@@ -3779,15 +3877,43 @@ function hasTrainingCompleted(training) {
 }
 
 function applyOverviewTrainingToCommonData(data, queueRows) {
-	const nextEntry = pickCurrentOrNextOverviewQueueEntry(queueRows || []);
-	if (!nextEntry) return;
-	const queueEmptyMs = Math.max(0, ...(queueRows || []).map((row) => (row?.endDate ? (Date.parse(row.endDate) || 0) : 0)));
-	const hasCharacterBooster = (queueRows || []).some((row) => Boolean(row?.hasTrainingBooster));
+	const rows = queueRows || [];
+	const now = Date.now();
+	const nextEntry = pickCurrentOrNextOverviewQueueEntry(rows);
+	const queueEmptyMs = Math.max(0, ...rows.map((row) => (row?.endDate ? (Date.parse(row.endDate) || 0) : 0)));
+	const hasCharacterBooster = rows.some((row) => Boolean(row?.hasTrainingBooster));
+	const latestQueueTrainingEndMs = Math.max(0, ...rows.map((row) => {
+		const endMs = row?.endDate ? (Date.parse(row.endDate) || 0) : 0;
+		return endMs > 0 && endMs <= now ? endMs : 0;
+	}));
+	const lastTrainingEndMs = Math.max(Number(data?.training?.lastTrainingEndMs || 0), latestQueueTrainingEndMs);
+
+	if (!nextEntry) {
+		if (lastTrainingEndMs <= 0) return;
+		data.training = {
+			typeName: null,
+			level: 0,
+			trainingStartMs: 0,
+			trainingEndMs: 0,
+			queueEmptyMs,
+			isCurrentlyTraining: false,
+			lastTrainingEndMs,
+			hasTrainingBooster: false,
+			hasCharacterBooster
+		};
+		return;
+	}
+
+	const trainingStartMs = nextEntry.startDate ? Date.parse(nextEntry.startDate) : Number(nextEntry.trainingStartMs || 0);
+	const trainingEndMs = nextEntry.endDate ? Date.parse(nextEntry.endDate) : Number(nextEntry.trainingEndMs || 0);
 	data.training = {
 		typeName: nextEntry.typeName || '',
 		level: Number(nextEntry.level || 0),
-		trainingEndMs: nextEntry.endDate ? Date.parse(nextEntry.endDate) : 0,
+		trainingStartMs,
+		trainingEndMs,
 		queueEmptyMs,
+		isCurrentlyTraining: trainingStartMs > 0 && trainingEndMs > now && trainingStartMs <= now,
+		lastTrainingEndMs,
 		hasTrainingBooster: Boolean(nextEntry.hasTrainingBooster),
 		hasCharacterBooster
 	};
