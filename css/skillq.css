@@ -396,9 +396,27 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 }
 
 .sq-badge--booster {
-	color: #2f1b00;
-	background: #f6c26a;
-	border-color: #e3a43f;
+	color: #ffffff;
+	background: #1f6b2e;
+	border-color: #165023;
+}
+
+.sq-badge--remaining {
+	color: #ffffff;
+	background: #c6372f;
+	border-color: #9e2b25;
+}
+
+.sq-badge--remaining-24h {
+	color: #ffffff;
+	background: #8f1d1d;
+	border-color: #6f1515;
+}
+
+.sq-badge--alarm {
+	color: #ffffff;
+	background: #9e1f1f;
+	border-color: #7a1717;
 }
 
 /* ── Toast ── */

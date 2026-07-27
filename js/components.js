@@ -66,6 +66,44 @@ function _boosterBadge(text = 'Booster') {
 	return badge;
 }
 
+function _remainingBadge(text = '<1 Week Remaining') {
+	const badge = _el('span', 'sq-badge sq-badge--remaining', text);
+	badge.title = 'Current training is expected to finish within 7 days.';
+	return badge;
+}
+
+function _remainingDayBadge(text = '<24 HOURS REMAINING') {
+	const badge = _el('span', 'sq-badge sq-badge--remaining-24h', text);
+	badge.title = 'Skill queue is expected to finish within 24 hours.';
+	return badge;
+}
+
+function _noTrainingAlarmBadge(text = 'NO SKILL TRAINING') {
+	const badge = _el('span', 'sq-badge sq-badge--alarm', text);
+	badge.title = 'No active skill training detected, and recent training ended within the last 14 days.';
+	return badge;
+}
+
+function _getQueueStatusBadge({ characterId, training, now }) {
+	const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+	const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+	const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+	const trainingEndMs = Number(training?.trainingEndMs || 0);
+	const queueEndMs = Number(training?.queueEmptyMs || 0);
+	const inferredIsCurrentlyTraining = Boolean(training?.typeName) && trainingEndMs > now;
+	const isCurrentlyTraining = training?.isCurrentlyTraining === true || inferredIsCurrentlyTraining;
+	const lastTrainingEndMs = Number(training?.lastTrainingEndMs || (trainingEndMs > 0 && trainingEndMs <= now ? trainingEndMs : 0));
+
+	const showDayEndingBadge = queueEndMs > now && (queueEndMs - now) <= twentyFourHoursMs;
+	const showWeekEndingBadge = queueEndMs > now && (queueEndMs - now) <= sevenDaysMs;
+	const showNoTrainingBadge = !isCurrentlyTraining && lastTrainingEndMs > 0 && (now - lastTrainingEndMs) <= fourteenDaysMs;
+
+	if (showDayEndingBadge) return _remainingDayBadge();
+	if (showWeekEndingBadge) return _remainingBadge();
+	if (showNoTrainingBadge) return _noTrainingAlarmBadge();
+	return null;
+}
+
 function _appendTrainingLabel(container, typeName, level) {
 	const nameText = String(typeName || '').trim();
 	const levelText = Number(level || 0) > 0 ? toRomanNumeral(level) : '';
@@ -198,6 +236,8 @@ function renderNavbar({ characters = [], currentCharId = null, isLoggedIn = fals
  */
 function renderCharCard({ character, training = null } = {}) {
 	const { character_id, name, balance = 0, skillPoints = 0 } = character;
+	const now = Date.now();
+	const statusBadge = _getQueueStatusBadge({ characterId: character_id, training, now });
 
 	const card = _el('div', 'sq-char-card');
 
@@ -237,10 +277,12 @@ function renderCharCard({ character, training = null } = {}) {
 			info.appendChild(boosterWrap);
 		}
 
-		if (training.queueEmptyMs && training.queueEmptyMs - Date.now() < 86400000) {
-			const warn = _el('div', 'sq-warn', 'Queue finishing soon');
-			info.appendChild(warn);
-		}
+	}
+
+	if (statusBadge) {
+		const statusWrap = _el('div', 'sq-char-card__booster');
+		statusWrap.appendChild(statusBadge);
+		info.appendChild(statusWrap);
 	}
 
 	card.appendChild(info);
@@ -260,6 +302,8 @@ function renderCharCard({ character, training = null } = {}) {
  */
 function renderCharInfo({ character, corporation = null, alliance = null, training = null, showBalance = true, actions = null } = {}) {
 	const { character_id, name, corporation_id, alliance_id, balance = 0 } = character;
+	const now = Date.now();
+	const statusBadge = _getQueueStatusBadge({ characterId: character_id, training, now });
 
 	const el = _el('div', 'sq-char-info');
 
@@ -317,9 +361,12 @@ function renderCharInfo({ character, corporation = null, alliance = null, traini
 			boosterWrap.appendChild(_boosterBadge('Booster'));
 			details.appendChild(boosterWrap);
 		}
-		if (training.queueEmptyMs && training.queueEmptyMs - Date.now() < 86400000) {
-			details.appendChild(_el('div', 'sq-warn', 'Queue finishing soon'));
-		}
+	}
+
+	if (statusBadge) {
+		const statusWrap = _el('div', 'sq-char-info__booster');
+		statusWrap.appendChild(statusBadge);
+		details.appendChild(statusWrap);
 	}
 
 	el.appendChild(details);
