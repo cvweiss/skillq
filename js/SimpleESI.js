@@ -68,6 +68,7 @@ class SimpleESI {
 
 		this.ssoAuthUrl = 'https://login.eveonline.com/v2/oauth/authorize/';
 		this.ssoTokenUrl = 'https://login.eveonline.com/v2/oauth/token';
+		this.ssoRevokeUrl = 'https://login.eveonline.com/v2/oauth/revoke';
 
 		const compatibility_date = '2020-01-01';
 
@@ -139,6 +140,20 @@ class SimpleESI {
 
 	async authLogout(destructive = true, redirectToRoot = true) {
 		await this.ready;
+		if (this.whoami && this.whoami.character_id) {
+			try {
+				const authed_json = await this.lsGet('authed_json', this.whoami.character_id);
+				if (authed_json && authed_json.refresh_token) {
+					await this.doRequest(this.ssoRevokeUrl, 'POST', this.mimetypeForm, {
+						token_type_hint: 'refresh_token',
+						token: authed_json.refresh_token,
+						client_id: this.ssoClientId
+					});
+				}
+			} catch (err) {
+				this.errorlogger('Failed to revoke token on logout:', err);
+			}
+		}
 		if (destructive) {
 			this.whoami = null;
 			await this.store.destroyDB();
