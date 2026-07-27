@@ -22,6 +22,7 @@ const LAST_BACKGROUND_REFRESH_KEY = '__meta:last-background-refresh';
 const CHARACTER_DATA_UPDATED_EVENT = 'skillq:character-data-updated';
 const CHARACTER_DATA_SYNC_CHANNEL_NAME = 'skillq:character-data-sync';
 const CHARACTER_DATA_SYNC_TAB_ID = `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const TRAIN_CACHE_KEY_PREFIX = 'train-v2';
 const characterDataSyncChannel = typeof BroadcastChannel !== 'undefined'
 	? new BroadcastChannel(CHARACTER_DATA_SYNC_CHANNEL_NAME)
 	: null;
@@ -59,6 +60,10 @@ function withStaticCacheHash(path) {
 	const cacheValue = githubhash || staticCacheHash;
 	const separator = path.includes('?') ? '&' : '?';
 	return `${path}${separator}v=${encodeURIComponent(cacheValue)}`;
+}
+
+function getTrainCacheKey(characterId) {
+	return `${TRAIN_CACHE_KEY_PREFIX}:${characterId}`;
 }
 
 async function fetchLatestCharacterJson(url, method = 'GET', headers = null, body = null) {
@@ -3148,7 +3153,7 @@ async function loadCharacterPageDataFromCache(characterId, tab) {
 			const overviewCached = await cacheGetCharacterData(`overview:${characterId}`);
 			applyOverviewTrainingToCommonData(data, overviewCached?.queue || []);
 		}
-		const trainData = (await cacheGetCharacterData(`train:${characterId}`)) || { implants: [], suggestions: [], optimize: null, updatedAt: 0 };
+		const trainData = (await cacheGetCharacterData(getTrainCacheKey(characterId))) || { implants: [], suggestions: [], optimize: null, updatedAt: 0 };
 		data.implants = trainData.implants;
 		data.suggestions = trainData.suggestions;
 		data.optimize = trainData.optimize || null;
@@ -3211,7 +3216,7 @@ async function isCharacterPageDataMissing(characterId) {
 	const [common, wallet, train, overview] = await Promise.all([
 		cacheGetCharacterData(`common:${characterId}`),
 		cacheGetCharacterData(`wallet:${characterId}`),
-		cacheGetCharacterData(`train:${characterId}`),
+		cacheGetCharacterData(getTrainCacheKey(characterId)),
 		cacheGetCharacterData(`overview:${characterId}`)
 	]);
 	const missingTrainOptimize = Boolean(train)
@@ -3352,7 +3357,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 		cachedCommonTrainingEndMs > 0 && cachedCommonTrainingEndMs <= Date.now() ? cachedCommonTrainingEndMs : 0
 	);
 	const cachedOverview = await cacheGetCharacterData(`overview:${characterId}`);
-	const cachedTrain = await cacheGetCharacterData(`train:${characterId}`);
+	const cachedTrain = await cacheGetCharacterData(getTrainCacheKey(characterId));
 	const missingTrainingLevel = Boolean(cachedCommon?.training?.typeName)
 		&& !Number(cachedCommon?.training?.level || 0);
 	const missingTrainingBoosterFlag = Boolean(cachedCommon?.training?.typeName)
@@ -3367,7 +3372,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 	const finishedTraining = hasTrainingCompleted(cachedCommon?.training);
 	const shouldRefreshCommon = await shouldRefreshCharacterData(commonKey);
 	const shouldRefreshWallet = await shouldRefreshCharacterData(`wallet:${characterId}`);
-	const shouldRefreshTrain = await shouldRefreshCharacterData(`train:${characterId}`);
+	const shouldRefreshTrain = await shouldRefreshCharacterData(getTrainCacheKey(characterId));
 	const shouldRefreshOverview = await shouldRefreshCharacterData(`overview:${characterId}`);
 	if (!shouldRefreshCommon && !missingTrainingLevel && !missingTrainingBoosterFlag && !missingCharacterBoosterFlag && !missingOverviewBoosterFlags && !missingTrainOptimize && !finishedTraining) {
 		if (tab === 'wallet' && !shouldRefreshWallet) return;
@@ -3396,8 +3401,8 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 			if (!shouldRefreshTrain && !missingTrainOptimize) return;
 			const train = await fetchTrainingSuggestions(characterId);
 			train.updatedAt = Date.now();
-			await cacheSetCharacterData(`train:${characterId}`, train)
-				|| await cacheTouchCharacterData(`train:${characterId}`);
+			await cacheSetCharacterData(getTrainCacheKey(characterId), train)
+				|| await cacheTouchCharacterData(getTrainCacheKey(characterId));
 			return;
 		}
 
@@ -3419,8 +3424,8 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 		if (shouldRefreshTrain || missingTrainOptimize) {
 			const train = await fetchTrainingSuggestions(characterId);
 			train.updatedAt = Date.now();
-			await cacheSetCharacterData(`train:${characterId}`, train)
-				|| await cacheTouchCharacterData(`train:${characterId}`);
+			await cacheSetCharacterData(getTrainCacheKey(characterId), train)
+				|| await cacheTouchCharacterData(getTrainCacheKey(characterId));
 		}
 
 		if (!shouldRefreshOverview && !missingOverviewBoosterFlags) return;
@@ -3967,7 +3972,7 @@ async function fetchWalletRows(characterId) {
 
 async function fetchTrainingSuggestions(characterId) {
 	try {
-		const [attributes, implants, skillsResponse] = await Promise.all([
+		const [attributes, implants, skillsResponse, queueResponse] = await Promise.all([
 			fallbackUnlessCharacterRefreshTokenError(
 				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/attributes`, characterId),
 				null,
@@ -3982,6 +3987,11 @@ async function fetchTrainingSuggestions(characterId) {
 				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skills`, characterId),
 				({ skills: [] }),
 				characterId
+			),
+			fallbackUnlessCharacterRefreshTokenError(
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/skillqueue`, characterId),
+				[],
+				characterId
 			)
 		]);
 
@@ -3994,7 +4004,12 @@ async function fetchTrainingSuggestions(characterId) {
 			implantName: implantByAttribute[attributeName]?.implantName || ''
 		})).filter((row) => row.baseValue > 0 || row.implantName);
 
-		const { suggestions, optimize } = await buildTrainingSuggestions(skillsResponse?.skills || [], attributes, implantByAttribute);
+		const { suggestions, optimize } = await buildTrainingSuggestions(
+			skillsResponse?.skills || [],
+			attributes,
+			implantByAttribute,
+			Array.isArray(queueResponse) ? queueResponse : []
+		);
 		return { implants: attributeRows, suggestions, optimize };
 	} catch (err) {
 		if (await handleCharacterRefreshTokenError(err, characterId)) {
@@ -4002,7 +4017,7 @@ async function fetchTrainingSuggestions(characterId) {
 		}
 		// If fetch fails, return cached data so users see stale data instead of nothing
 		console.warn(`Failed to fetch fresh training suggestions for ${characterId}, using cache:`, err);
-		const cached = await cacheGetCharacterData(`train:${characterId}`);
+		const cached = await cacheGetCharacterData(getTrainCacheKey(characterId));
 		if (cached) {
 			return cached;
 		}
@@ -4042,11 +4057,10 @@ function buildAttributeImplantMap(implantInfos = []) {
 	return bestByAttribute;
 }
 
-async function buildTrainingSuggestions(skills, attributes, implantByAttribute = null) {
+async function buildTrainingSuggestions(skills, attributes, implantByAttribute = null, queueRows = []) {
 	const candidates = skills.filter((skill) => Number(skill.trained_skill_level ?? 0) < 5).slice(0, 25);
 	const typeInfos = new Map(await Promise.all(candidates.map(async (row) => [row.skill_id, await getTypeInfo(row.skill_id)])));
 	const suggestions = [];
-	const optimizationCandidates = [];
 
 	for (const row of candidates) {
 		const typeInfo = typeInfos.get(row.skill_id);
@@ -4074,6 +4088,47 @@ async function buildTrainingSuggestions(skills, attributes, implantByAttribute =
 			queue: 0,
 			remainingSeconds
 		});
+	}
+
+	const queuedSkillIds = Array.from(new Set((Array.isArray(queueRows) ? queueRows : [])
+		.map((row) => Number(row?.skill_id || 0))
+		.filter((id) => id > 0)));
+	const missingQueuedTypeIds = queuedSkillIds.filter((id) => !typeInfos.has(id));
+	if (missingQueuedTypeIds.length > 0) {
+		const extraTypeInfos = await Promise.all(missingQueuedTypeIds.map(async (id) => [id, await getTypeInfo(id)]));
+		for (const [id, info] of extraTypeInfos) {
+			typeInfos.set(id, info);
+		}
+	}
+
+	const skillSpById = new Map((Array.isArray(skills) ? skills : []).map((row) => [
+		Number(row?.skill_id || 0),
+		Number(row?.skillpoints_in_skill || 0)
+	]));
+	const now = Date.now();
+	const optimizationCandidates = [];
+	for (const queueRow of (Array.isArray(queueRows) ? queueRows : [])) {
+		const skillId = Number(queueRow?.skill_id || 0);
+		if (skillId <= 0) continue;
+		const typeInfo = typeInfos.get(skillId);
+		if (!typeInfo) continue;
+		const dogma = new Map((typeInfo?.dogma_attributes || []).map((attr) => [attr.attribute_id, attr.value]));
+		const primaryAttribute = attributeIdToName(dogma.get(180));
+		const secondaryAttribute = attributeIdToName(dogma.get(181));
+		if (!primaryAttribute || !secondaryAttribute) continue;
+
+		const startSp = Number(queueRow?.training_start_sp ?? queueRow?.level_start_sp ?? 0);
+		const endSp = Number(queueRow?.level_end_sp ?? 0);
+		if (endSp <= startSp) continue;
+
+		const startMs = queueRow?.start_date ? (Date.parse(queueRow.start_date) || 0) : 0;
+		const endMs = queueRow?.finish_date ? (Date.parse(queueRow.finish_date) || 0) : 0;
+		if (endMs > 0 && endMs <= now) continue;
+		const isActive = startMs > 0 && endMs > now && startMs <= now;
+		const currentSp = isActive ? Number(skillSpById.get(skillId) || startSp) : startSp;
+		const remainingSp = Math.max(0, endSp - currentSp);
+		if (remainingSp <= 0) continue;
+
 		optimizationCandidates.push({
 			primaryAttribute,
 			secondaryAttribute,
