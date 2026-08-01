@@ -1504,7 +1504,7 @@ async function renderCharacterPage(charName, tab = 'overview') {
 
 	await window.esi.changeCharacter(String(matched.character_id));
 	const characterId = String(window.esi.whoami.character_id);
-	const activeTab = ['overview', 'wallet', 'train'].includes(tab) ? tab : 'overview';
+	const activeTab = ['overview', 'wallet', 'train', 'clones'].includes(tab) ? tab : 'overview';
 	const data = await loadCharacterPageDataFromCache(characterId, activeTab);
 	const orderedCharacters = await getOrderedCharactersForNavbar(characters);
 
@@ -1658,6 +1658,17 @@ function buildCharacterTabContent(data, activeTab) {
 			suggestions: data.suggestions || [],
 			optimize: data.optimize || null
 		}));
+		if (data.lastUpdatedAt) {
+			const updated = document.createElement('p');
+			updated.className = 'sq-muted sq-char-note';
+			updated.textContent = `Last updated: ${formatDateTime(data.lastUpdatedAt)}`;
+			content.appendChild(updated);
+		}
+		return content;
+	}
+
+	if (activeTab === 'clones') {
+		content.appendChild(renderCharClones({ clones: data.clones || [] }));
 		if (data.lastUpdatedAt) {
 			const updated = document.createElement('p');
 			updated.className = 'sq-muted sq-char-note';
@@ -2576,6 +2587,7 @@ async function clearCharacterLocalData(characterId) {
 		`common:${charId}`,
 		`wallet:${charId}`,
 		`train:${charId}`,
+		getTrainCacheKey(charId),
 		`overview:${charId}`
 	];
 	for (const key of keys) {
@@ -3148,15 +3160,19 @@ async function loadCharacterPageDataFromCache(characterId, tab) {
 		return data;
 	}
 
-	if (tab === 'train') {
+	if (tab === 'train' || tab === 'clones') {
 		if (Number(data?.training?.trainingEndMs || 0) > 0 && Number(data.training.trainingEndMs) <= Date.now()) {
 			const overviewCached = await cacheGetCharacterData(`overview:${characterId}`);
 			applyOverviewTrainingToCommonData(data, overviewCached?.queue || []);
 		}
-		const trainData = (await cacheGetCharacterData(getTrainCacheKey(characterId))) || { implants: [], suggestions: [], optimize: null, updatedAt: 0 };
-		data.implants = trainData.implants;
-		data.suggestions = trainData.suggestions;
-		data.optimize = trainData.optimize || null;
+		const trainData = (await cacheGetCharacterData(getTrainCacheKey(characterId))) || { clones: [], implants: [], suggestions: [], optimize: null, updatedAt: 0 };
+		if (tab === 'clones') {
+			data.clones = trainData.clones || [];
+		} else {
+			data.implants = trainData.implants;
+			data.suggestions = trainData.suggestions;
+			data.optimize = trainData.optimize || null;
+		}
 		latestUpdatedAt = Math.max(latestUpdatedAt, Number(trainData.updatedAt || 0));
 		data.lastUpdatedAt = latestUpdatedAt || null;
 		return data;
@@ -3223,7 +3239,9 @@ async function isCharacterPageDataMissing(characterId) {
 		&& Array.isArray(train?.suggestions)
 		&& train.suggestions.length > 0
 		&& !Object.prototype.hasOwnProperty.call(train || {}, 'optimize');
-	return !common || !wallet || !train || !overview || missingTrainOptimize;
+	const missingTrainClones = Boolean(train)
+		&& !Object.prototype.hasOwnProperty.call(train || {}, 'clones');
+	return !common || !wallet || !train || !overview || missingTrainOptimize || missingTrainClones;
 }
 
 async function refreshCharacterSummaryInBackground(characterId, characterName) {
@@ -3375,14 +3393,17 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 	const missingTrainOptimize = Array.isArray(cachedTrain?.suggestions)
 		&& cachedTrain.suggestions.length > 0
 		&& !Object.prototype.hasOwnProperty.call(cachedTrain || {}, 'optimize');
+	const missingTrainClones = Boolean(cachedTrain)
+		&& !Object.prototype.hasOwnProperty.call(cachedTrain || {}, 'clones');
 	const finishedTraining = hasTrainingCompleted(cachedCommon?.training);
 	const shouldRefreshCommon = await shouldRefreshCharacterData(commonKey);
 	const shouldRefreshWallet = await shouldRefreshCharacterData(`wallet:${characterId}`);
 	const shouldRefreshTrain = await shouldRefreshCharacterData(getTrainCacheKey(characterId));
 	const shouldRefreshOverview = await shouldRefreshCharacterData(`overview:${characterId}`);
-	if (!shouldRefreshCommon && !missingTrainingLevel && !missingTrainingBoosterFlag && !missingCharacterBoosterFlag && !missingOverviewBoosterFlags && !missingTrainOptimize && !finishedTraining) {
+	if (!shouldRefreshCommon && !missingTrainingLevel && !missingTrainingBoosterFlag && !missingCharacterBoosterFlag && !missingOverviewBoosterFlags && !missingTrainOptimize && !missingTrainClones && !finishedTraining) {
 		if (tab === 'wallet' && !shouldRefreshWallet) return;
 		if (tab === 'train' && !shouldRefreshTrain) return;
+		if (tab === 'clones' && !shouldRefreshTrain) return;
 		if (tab === 'overview' && !shouldRefreshOverview) return;
 		if (tab == null && !shouldRefreshWallet && !shouldRefreshTrain && !shouldRefreshOverview) return;
 	}
@@ -3404,7 +3425,16 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 		}
 
 		if (tab === 'train') {
-			if (!shouldRefreshTrain && !missingTrainOptimize) return;
+			if (!shouldRefreshTrain && !missingTrainOptimize && !missingTrainClones) return;
+			const train = await fetchTrainingSuggestions(characterId);
+			train.updatedAt = Date.now();
+			await cacheSetCharacterData(getTrainCacheKey(characterId), train)
+				|| await cacheTouchCharacterData(getTrainCacheKey(characterId));
+			return;
+		}
+
+		if (tab === 'clones') {
+			if (!shouldRefreshTrain && !missingTrainClones) return;
 			const train = await fetchTrainingSuggestions(characterId);
 			train.updatedAt = Date.now();
 			await cacheSetCharacterData(getTrainCacheKey(characterId), train)
@@ -3427,7 +3457,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 				|| await cacheTouchCharacterData(`wallet:${characterId}`);
 		}
 
-		if (shouldRefreshTrain || missingTrainOptimize) {
+		if (shouldRefreshTrain || missingTrainOptimize || missingTrainClones) {
 			const train = await fetchTrainingSuggestions(characterId);
 			train.updatedAt = Date.now();
 			await cacheSetCharacterData(getTrainCacheKey(characterId), train)
@@ -3533,7 +3563,7 @@ function shouldRerenderCurrentRouteForKey(key) {
 			|| key.startsWith(`common:${renderedCharacterId}`)
 			|| key.startsWith(`overview:${renderedCharacterId}`)
 			|| key.startsWith(`wallet:${renderedCharacterId}`)
-			|| key.startsWith(`train:${renderedCharacterId}`);
+			|| key.startsWith(`${TRAIN_CACHE_KEY_PREFIX}:${renderedCharacterId}`);
 	}
 
 	if (route.name === 'settings' || route.name === 'readme' || route.name === 'share' || route.name === 'item') {
@@ -4004,7 +4034,7 @@ async function fetchWalletRows(characterId) {
 
 async function fetchTrainingSuggestions(characterId) {
 	try {
-		const [attributes, implants, skillsResponse, queueResponse] = await Promise.all([
+		const [attributes, activeImplantTypeIds, clonesResponse, skillsResponse, queueResponse] = await Promise.all([
 			fallbackUnlessCharacterRefreshTokenError(
 				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/attributes`, characterId),
 				null,
@@ -4013,6 +4043,11 @@ async function fetchTrainingSuggestions(characterId) {
 			fallbackUnlessCharacterRefreshTokenError(
 				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/implants`, characterId),
 				[],
+				characterId
+			),
+			fallbackUnlessCharacterRefreshTokenError(
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/clones`, characterId),
+				({ jump_clones: [] }),
 				characterId
 			),
 			fallbackUnlessCharacterRefreshTokenError(
@@ -4027,8 +4062,19 @@ async function fetchTrainingSuggestions(characterId) {
 			)
 		]);
 
-		const implantInfos = await Promise.all((implants || []).map((typeId) => getTypeInfo(typeId)));
-		const implantByAttribute = buildAttributeImplantMap(implantInfos);
+		const jumpClones = Array.isArray(clonesResponse?.jump_clones) ? clonesResponse.jump_clones : [];
+		const allImplantTypeIds = Array.from(new Set([
+			...(Array.isArray(activeImplantTypeIds) ? activeImplantTypeIds : []),
+			...jumpClones.flatMap((clone) => Array.isArray(clone?.implants) ? clone.implants : [])
+		].map((typeId) => Number(typeId || 0)).filter((typeId) => typeId > 0)));
+		const implantInfoByTypeId = new Map(await Promise.all(allImplantTypeIds.map(async (typeId) => [
+			typeId,
+			await getTypeInfo(typeId)
+		])));
+		const activeImplantInfos = (Array.isArray(activeImplantTypeIds) ? activeImplantTypeIds : [])
+			.map((typeId) => implantInfoByTypeId.get(Number(typeId || 0)))
+			.filter(Boolean);
+		const implantByAttribute = buildAttributeImplantMap(activeImplantInfos);
 		const attributeRows = ['charisma', 'intelligence', 'memory', 'perception', 'willpower'].map((attributeName) => ({
 			attributeName,
 			baseValue: Number(attributes?.[attributeName] || 0),
@@ -4042,7 +4088,8 @@ async function fetchTrainingSuggestions(characterId) {
 			implantByAttribute,
 			Array.isArray(queueResponse) ? queueResponse : []
 		);
-		return { implants: attributeRows, suggestions, optimize };
+		const clones = await buildCloneRows(clonesResponse, activeImplantTypeIds, implantInfoByTypeId);
+		return { clones, implants: attributeRows, suggestions, optimize };
 	} catch (err) {
 		if (await handleCharacterRefreshTokenError(err, characterId)) {
 			throw err;
@@ -4055,6 +4102,47 @@ async function fetchTrainingSuggestions(characterId) {
 		}
 		throw err; // Re-throw if no cache available
 	}
+}
+
+async function buildCloneRows(clonesResponse, activeImplantTypeIds = [], implantInfoByTypeId = new Map()) {
+	const toImplantRows = (typeIds) => (Array.isArray(typeIds) ? typeIds : [])
+		.map((typeId) => {
+			const numericTypeId = Number(typeId || 0);
+			if (numericTypeId <= 0) return null;
+			const typeInfo = implantInfoByTypeId.get(numericTypeId);
+			return {
+				typeID: numericTypeId,
+				typeName: typeInfo?.name || `Implant ${numericTypeId}`,
+				slot: Math.max(0, Math.round(Number(_getDogmaValue(typeInfo, 331) || 0)))
+			};
+		})
+		.filter(Boolean)
+		.sort((left, right) => {
+			const leftSlot = Number(left.slot || Number.MAX_SAFE_INTEGER);
+			const rightSlot = Number(right.slot || Number.MAX_SAFE_INTEGER);
+			return leftSlot - rightSlot || String(left.typeName).localeCompare(String(right.typeName));
+		});
+
+	const rows = [{
+		cloneId: null,
+		name: 'Active Clone',
+		kind: 'Active',
+		isActive: true,
+		locationLabel: 'Current body',
+		implants: toImplantRows(activeImplantTypeIds)
+	}];
+
+	const jumpClones = Array.isArray(clonesResponse?.jump_clones) ? clonesResponse.jump_clones : [];
+	const jumpCloneRows = await Promise.all(jumpClones.map(async (clone, index) => ({
+		cloneId: Number(clone?.jump_clone_id || 0) || null,
+		name: String(clone?.name || '').trim() || `Jump Clone ${index + 1}`,
+		kind: 'Jump Clone',
+		isActive: false,
+		locationLabel: await getCloneLocationLabel(clone?.location_id, clone?.location_type),
+		implants: toImplantRows(clone?.implants)
+	})));
+
+	return rows.concat(jumpCloneRows);
 }
 
 function buildAttributeImplantMap(implantInfos = []) {
@@ -4332,6 +4420,28 @@ async function getAllianceInfo(allianceId) {
 		return info;
 	} catch (_) {
 		return null;
+	}
+}
+
+async function getCloneLocationLabel(locationId, locationType) {
+	const numericLocationId = Number(locationId || 0);
+	const normalizedType = String(locationType || '').toLowerCase();
+	if (numericLocationId <= 0) return 'Unknown location';
+
+	if (normalizedType !== 'station') {
+		return `${capitalizeFirst(normalizedType || 'location')} ${numericLocationId}`;
+	}
+
+	const cacheKey = `station-info:${numericLocationId}`;
+	const cached = await lookupCacheGet(cacheKey);
+	if (cached?.name) return cached.name;
+
+	try {
+		const info = await window.esi.doJsonRequest(`${ESI_BASE}/universe/stations/${numericLocationId}`);
+		if (info) await lookupCacheSet(cacheKey, info);
+		return info?.name || `Station ${numericLocationId}`;
+	} catch (_) {
+		return `Station ${numericLocationId}`;
 	}
 }
 

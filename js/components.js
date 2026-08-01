@@ -11,6 +11,7 @@
  *   renderCharMenu(options)
  *   renderCharSkills(options)
  *   renderCharWallet(options)
+ *   renderCharClones(options)
  *   renderCharTrain(options)
  */
 
@@ -385,7 +386,7 @@ function renderCharInfo({ character, corporation = null, alliance = null, traini
  * renderCharMenu({ charName, activeTab })
  *
  * charName:  plain character name (will be URI-encoded)
- * activeTab: 'overview' | 'wallet' | 'train'
+ * activeTab: 'overview' | 'wallet' | 'train' | 'clones'
  */
 function renderCharMenu({ charName, activeTab = 'overview' } = {}) {
 	const encoded = encodeCharacterNameForPath(charName);
@@ -393,6 +394,7 @@ function renderCharMenu({ charName, activeTab = 'overview' } = {}) {
 		{ id: 'overview', label: 'Overview', href: `/char/${encoded}/` },
 		{ id: 'wallet',   label: 'Wallet',   href: `/char/${encoded}/wallet/` },
 		{ id: 'train',    label: 'Train',    href: `/char/${encoded}/train/` },
+		{ id: 'clones',   label: 'Clones',   href: `/char/${encoded}/clones/` },
 	];
 
 	const nav = _el('nav', 'sq-char-menu');
@@ -680,7 +682,68 @@ function renderCharWallet({ transactions = [] } = {}) {
 	return el;
 }
 
-/* ─── Character Train (implants + suggestions) ───────────────────────────────
+/* ─── Character Clones ───────────────────────────────────────────────────────
+ *
+ * renderCharClones({ clones })
+ *
+ * clones: [{ cloneId, name, kind, isActive, locationLabel,
+ *            implants: [{ typeID, typeName, slot }] }]
+ */
+function renderCharClones({ clones = [] } = {}) {
+	const el = _el('div', 'sq-clones-page');
+
+	const clonesSection = _el('section', 'sq-clones');
+	const clonesTitle = _el('h4', 'sq-section-title', 'Clones & Implants');
+	clonesTitle.appendChild(_el('small', null, `(${clones.length} ${clones.length === 1 ? 'clone' : 'clones'})`));
+	clonesSection.appendChild(clonesTitle);
+
+	if (clones.length === 0) {
+		clonesSection.appendChild(_el('p', 'sq-muted', 'No clone data available.'));
+	} else {
+		const cloneGrid = _el('div', 'sq-clone-grid');
+		for (const clone of clones) {
+			const card = _el('article', `sq-clone-card${clone.isActive ? ' sq-clone-card--active' : ''}`);
+			const header = _el('div', 'sq-clone-card__header');
+			const titleWrap = _el('div', 'sq-clone-card__title-wrap');
+			titleWrap.appendChild(_el('h5', 'sq-clone-card__title', clone.name || clone.kind || 'Clone'));
+			titleWrap.appendChild(_el('span', 'sq-clone-card__kind', clone.kind || 'Clone'));
+			header.appendChild(titleWrap);
+			header.appendChild(_el('div', 'sq-clone-card__location', clone.locationLabel || 'Unknown location'));
+			card.appendChild(header);
+
+			const installed = Array.isArray(clone.implants) ? clone.implants : [];
+			if (installed.length === 0) {
+				card.appendChild(_el('p', 'sq-muted sq-clone-card__empty', 'No implants installed.'));
+			} else {
+				const list = _el('ul', 'sq-clone-implant-list');
+				for (const implant of installed) {
+					const item = _el('li', 'sq-clone-implant');
+					const link = _a(`/item/${implant.typeID}/`, null, 'sq-clone-implant__link');
+					link.appendChild(_img(
+						`https://images.evetech.net/types/${implant.typeID}/icon?size=32`,
+						implant.typeName,
+						'sq-clone-implant__icon',
+						{ loading: 'lazy', decoding: 'async', width: 32, height: 32 }
+					));
+					link.appendChild(_el('span', 'sq-clone-implant__name', implant.typeName || `Implant ${implant.typeID}`));
+					item.appendChild(link);
+					if (Number(implant.slot || 0) > 0) {
+						item.appendChild(_el('span', 'sq-clone-implant__slot', `Slot ${implant.slot}`));
+					}
+					list.appendChild(item);
+				}
+				card.appendChild(list);
+			}
+			cloneGrid.appendChild(card);
+		}
+		clonesSection.appendChild(cloneGrid);
+	}
+	clonesSection.appendChild(_el('p', 'sq-muted sq-clones-note', 'Player-owned structures are shown by structure ID.'));
+	el.appendChild(clonesSection);
+	return el;
+}
+
+/* ─── Character Train (attributes + suggestions) ─────────────────────────────
  *
  * renderCharTrain({ implants, suggestions, optimize })
  *
@@ -697,7 +760,7 @@ function renderCharTrain({ implants = [], suggestions = [], optimize = null } = 
 	/* ── Implants ── */
 	if (implants.length > 0) {
 		const section = _el('section', 'sq-implants');
-		section.appendChild(_el('h4', 'sq-section-title', 'Implants'));
+		section.appendChild(_el('h4', 'sq-section-title', 'Training Attributes'));
 
 		const table = document.createElement('table');
 		table.className = 'sq-table sq-table--compact';
@@ -983,5 +1046,6 @@ window.renderCharInfo  = renderCharInfo;
 window.renderCharMenu  = renderCharMenu;
 window.renderCharSkills = renderCharSkills;
 window.renderCharWallet = renderCharWallet;
+window.renderCharClones = renderCharClones;
 window.renderCharTrain  = renderCharTrain;
 window.renderSharedCharSkills = renderSharedCharSkills;

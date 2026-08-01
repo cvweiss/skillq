@@ -1212,7 +1212,72 @@ text-align: left;
 /* ═══════════════════════════════════════════════════════════════
    TRAINING / IMPLANTS
 ═══════════════════════════════════════════════════════════════ */
-.sq-train { padding: 0.75rem; }
+.sq-train,
+.sq-clones-page { padding: 0.75rem; }
+.sq-clones { margin-bottom: 1.5rem; }
+.sq-clone-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 0.75rem;
+}
+.sq-clone-card {
+	min-width: 0;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	overflow: hidden;
+	background: var(--card);
+}
+.sq-clone-card--active { border-color: color-mix(in srgb, var(--accent) 65%, var(--border) 35%); }
+.sq-clone-card__header {
+	padding: 0.55rem 0.65rem;
+	background: var(--bg);
+	border-bottom: 1px solid var(--border);
+}
+.sq-clone-card__title-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+.sq-clone-card__title { margin: 0; font-size: 0.95rem; }
+.sq-clone-card__kind {
+	flex: 0 0 auto;
+	font-size: 0.68rem;
+	line-height: 1.2;
+	padding: 0.12rem 0.35rem;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	color: var(--muted);
+	text-transform: uppercase;
+}
+.sq-clone-card--active .sq-clone-card__kind { color: var(--accent); border-color: var(--accent); }
+.sq-clone-card__location {
+	margin-top: 0.2rem;
+	font-size: 0.78rem;
+	color: var(--muted);
+	overflow-wrap: anywhere;
+}
+.sq-clone-card__empty { margin: 0; padding: 0.65rem; }
+.sq-clone-implant-list { list-style: none; margin: 0; padding: 0; }
+.sq-clone-implant {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	padding: 0.4rem 0.55rem;
+	border-top: 1px solid var(--border);
+}
+.sq-clone-implant:first-child { border-top: none; }
+.sq-clone-implant__link {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	min-width: 0;
+	flex: 1 1 auto;
+}
+.sq-clone-implant__icon { flex: 0 0 32px; border-radius: 4px; }
+.sq-clone-implant__name { min-width: 0; overflow-wrap: anywhere; }
+.sq-clone-implant__slot { flex: 0 0 auto; color: var(--muted); font-size: 0.76rem; }
+.sq-clones-note { margin-bottom: 0; }
 .sq-implants { margin-bottom: 1.5rem; }
 .sq-optimize { margin-bottom: 1.5rem; }
 .sq-optimize-summary { margin-top: 0.45rem; }
@@ -1295,7 +1360,8 @@ text-align: left;
 	.sq-char-menu__tab a { white-space: nowrap; padding: 0.55rem 0.75rem; }
 	.sq-skills,
 	.sq-wallet,
-	.sq-train { padding: 0.5rem; }
+	.sq-train,
+	.sq-clones-page { padding: 0.5rem; }
 	.sq-train-top-panels { grid-template-columns: 1fr; gap: 0.75rem; }
 	.sq-alert { margin: 0.5rem; padding: 0.55rem 0.65rem; }
 	.sq-char-note { padding: 0 0.5rem 0.5rem; }
