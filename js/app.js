@@ -49,10 +49,11 @@ const SHARE_SECTION_KEYS = {
 	overviewSkills: 'overviewSkills',
 	skillQueue: 'skillQueue',
 	totalSkillPoints: 'totalSkillPoints',
-	walletBalance: 'walletBalance'
+	walletBalance: 'walletBalance',
+	jumpClones: 'jumpClones'
 };
-let githubhash = "1c999a3";
-const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '1c999a3';
+let githubhash = "a8c4022";
+const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : 'a8c4022';
 let layoutMode = 'restricted';
 let themeMode = 'dark';
 
@@ -385,7 +386,8 @@ function getDefaultShareSections() {
 		[SHARE_SECTION_KEYS.overviewSkills]: true,
 		[SHARE_SECTION_KEYS.skillQueue]: true,
 		[SHARE_SECTION_KEYS.totalSkillPoints]: true,
-		[SHARE_SECTION_KEYS.walletBalance]: true
+		[SHARE_SECTION_KEYS.walletBalance]: true,
+		[SHARE_SECTION_KEYS.jumpClones]: true
 	};
 }
 
@@ -396,11 +398,13 @@ function normalizeShareSections(sections) {
 		[SHARE_SECTION_KEYS.overviewSkills]: sections[SHARE_SECTION_KEYS.overviewSkills] !== false,
 		[SHARE_SECTION_KEYS.skillQueue]: sections[SHARE_SECTION_KEYS.skillQueue] !== false,
 		[SHARE_SECTION_KEYS.totalSkillPoints]: sections[SHARE_SECTION_KEYS.totalSkillPoints] !== false,
-		[SHARE_SECTION_KEYS.walletBalance]: sections[SHARE_SECTION_KEYS.walletBalance] !== false
+		[SHARE_SECTION_KEYS.walletBalance]: sections[SHARE_SECTION_KEYS.walletBalance] !== false,
+		[SHARE_SECTION_KEYS.jumpClones]: sections[SHARE_SECTION_KEYS.jumpClones] !== false
 	};
 }
 
-function getShareSectionChecklistState({ skills = [], queue = [], totalSP = 0, balance = 0 } = {}) {
+function getShareSectionChecklistState({ skills = [], queue = [], totalSP = 0, balance = 0, clones = [] } = {}) {
+	const jumpClones = (Array.isArray(clones) ? clones : []).filter((clone) => !clone?.isActive);
 	return [
 		{
 			key: SHARE_SECTION_KEYS.overviewSkills,
@@ -429,6 +433,14 @@ function getShareSectionChecklistState({ skills = [], queue = [], totalSP = 0, b
 			label: 'Wallet balance',
 			help: `${numberFormat(Number(balance || 0), 2)} ISK`,
 			available: true
+		},
+		{
+			key: SHARE_SECTION_KEYS.jumpClones,
+			label: 'Jump clones',
+			help: jumpClones.length > 0
+				? `${jumpClones.length} ${jumpClones.length === 1 ? 'clone' : 'clones'}, including implants (if any)`
+				: 'No jump clone data loaded yet',
+			available: jumpClones.length > 0
 		}
 	];
 }
@@ -525,7 +537,8 @@ function showShareSectionChecklistDialog(checklistState, defaults = getDefaultSh
 			[SHARE_SECTION_KEYS.overviewSkills]: checkboxByKey.get(SHARE_SECTION_KEYS.overviewSkills)?.checked,
 			[SHARE_SECTION_KEYS.skillQueue]: checkboxByKey.get(SHARE_SECTION_KEYS.skillQueue)?.checked,
 			[SHARE_SECTION_KEYS.totalSkillPoints]: checkboxByKey.get(SHARE_SECTION_KEYS.totalSkillPoints)?.checked,
-			[SHARE_SECTION_KEYS.walletBalance]: checkboxByKey.get(SHARE_SECTION_KEYS.walletBalance)?.checked
+			[SHARE_SECTION_KEYS.walletBalance]: checkboxByKey.get(SHARE_SECTION_KEYS.walletBalance)?.checked,
+			[SHARE_SECTION_KEYS.jumpClones]: checkboxByKey.get(SHARE_SECTION_KEYS.jumpClones)?.checked
 		});
 
 		const hasAnySelectedSection = () => Array.from(checkboxByKey.values()).some((input) => input.checked);
@@ -581,11 +594,16 @@ function renderCharacterShareControls({ character, skills = [], queue = [], tota
 
 	button.addEventListener('click', async () => {
 		if (button.disabled) return;
+		const characterId = String(character?.character_id || '');
+		const trainCached = characterId
+			? await cacheGetCharacterData(getTrainCacheKey(characterId))
+			: null;
 		const checklistState = getShareSectionChecklistState({
 			skills,
 			queue,
 			totalSP,
-			balance: Number(character?.balance || 0)
+			balance: Number(character?.balance || 0),
+			clones: trainCached?.clones || []
 		});
 		const selectedSections = await showShareSectionChecklistDialog(checklistState, getDefaultShareSections());
 		if (!selectedSections) return;
@@ -742,14 +760,26 @@ async function buildCharacterShareUrl(character, skills, queue = [], totalSP = 0
 		: '';
 	const snapshotUnix = Math.floor(Date.now() / 1000);
 	const encodedSnapshotUnix = encodeCompactInt(snapshotUnix);
+	let encodedJumpClones = '';
+	if (sections[SHARE_SECTION_KEYS.jumpClones]) {
+		const trainCached = await cacheGetCharacterData(getTrainCacheKey(characterId));
+		const jumpClones = (Array.isArray(trainCached?.clones) ? trainCached.clones : [])
+			.filter((clone) => !clone?.isActive);
+		if (jumpClones.length === 0) {
+			throw new Error('Jump clone data is not available for this share.');
+		}
+		encodedJumpClones = await encodeShareJumpClonesPayload(jumpClones);
+	}
 	const signature = await createCharacterShareSignature(
 		shareContext,
 		encodedSkills,
 		encodedTotalSP,
 		encodedBalance,
-		encodedSnapshotUnix
+		encodedSnapshotUnix,
+		encodedJumpClones
 	);
-	return `${window.location.origin}/share/${encodeURIComponent(characterId)}#${encodedSkills}.${signature}.${encodedTotalSP}.${encodedBalance}.${encodedSnapshotUnix}`;
+	const baseUrl = `${window.location.origin}/share/${encodeURIComponent(characterId)}#${encodedSkills}.${signature}.${encodedTotalSP}.${encodedBalance}.${encodedSnapshotUnix}`;
+	return encodedJumpClones ? `${baseUrl}.${encodedJumpClones}` : baseUrl;
 }
 
 async function renderCurrentNavbarForUtilityPage() {
@@ -866,8 +896,8 @@ async function getCharacterShareContext(characterId, options = {}) {
 	};
 }
 
-async function createCharacterShareSignature(shareContext, encodedSkills, encodedTotalSP = '', encodedBalance = '', encodedSnapshotUnix = '') {
-	const signatureText = [
+async function createCharacterShareSignature(shareContext, encodedSkills, encodedTotalSP = '', encodedBalance = '', encodedSnapshotUnix = '', encodedJumpClones = '') {
+	const signatureParts = [
 		`skillq-share-v${SHARE_URL_VERSION}`,
 		String(shareContext.character.character_id || ''),
 		String(shareContext.character.corporation_id || ''),
@@ -876,7 +906,11 @@ async function createCharacterShareSignature(shareContext, encodedSkills, encode
 		String(encodedTotalSP || ''),
 		String(encodedBalance || ''),
 		String(encodedSnapshotUnix || '')
-	].join('|');
+	];
+	if (encodedJumpClones) {
+		signatureParts.push(String(encodedJumpClones));
+	}
+	const signatureText = signatureParts.join('|');
 	return (await sha256Base64Url(signatureText)).slice(0, 16);
 }
 
@@ -1031,6 +1065,98 @@ async function decodeShareSkillsPayload(encodedSkills) {
 	} catch (err) {
 		throw new Error('This shared link could not be decompressed.');
 	}
+}
+
+async function encodeShareJumpClonesPayload(clones) {
+	const rows = (Array.isArray(clones) ? clones : [])
+		.filter((clone) => !clone?.isActive)
+		.slice(0, 25)
+		.map((clone) => ({
+			n: String(clone?.name || 'Jump Clone').slice(0, 100),
+			l: String(clone?.locationLabel || 'Unknown location').slice(0, 200),
+			i: (Array.isArray(clone?.implants) ? clone.implants : [])
+				.map((implant) => Number(implant?.typeID || 0))
+				.filter((typeId) => Number.isSafeInteger(typeId) && typeId > 0)
+				.slice(0, 20)
+		}));
+	const rawBytes = new TextEncoder().encode(JSON.stringify({ v: 1, c: rows }));
+	const rawPayload = `j1_${bytesToBase64Url(rawBytes)}`;
+	if (!supportsShareCompressionStreams()) return rawPayload;
+
+	const candidates = [rawPayload];
+	try {
+		const deflated = await deflateBytes(rawBytes);
+		candidates.push(`j1d_${bytesToBase64Url(deflated)}`);
+	} catch (err) {
+		console.warn('Deflate compression unavailable for jump clone share payload.', err);
+	}
+	try {
+		const gzipped = await gzipBytes(rawBytes);
+		candidates.push(`j1g_${bytesToBase64Url(gzipped)}`);
+	} catch (err) {
+		console.warn('Gzip compression unavailable for jump clone share payload.', err);
+	}
+
+	return candidates.reduce((shortest, candidate) => (candidate.length < shortest.length ? candidate : shortest), rawPayload);
+}
+
+async function decodeShareJumpClonesPayload(encodedJumpClones) {
+	const payload = String(encodedJumpClones || '').trim();
+	if (!payload) return [];
+
+	try {
+		let bytes;
+		if (payload.startsWith('j1_')) {
+			bytes = base64UrlToBytes(payload.slice(3));
+		} else if (payload.startsWith('j1d_')) {
+			if (!supportsShareCompressionStreams()) {
+				throw new Error('CompressionStream support is unavailable.');
+			}
+			bytes = await inflateBytes(base64UrlToBytes(payload.slice(4)));
+		} else if (payload.startsWith('j1g_')) {
+			if (!supportsShareCompressionStreams()) {
+				throw new Error('CompressionStream support is unavailable.');
+			}
+			bytes = await gunzipBytes(base64UrlToBytes(payload.slice(4)));
+		} else {
+			throw new Error('Unsupported jump clone payload.');
+		}
+
+		const decoded = JSON.parse(new TextDecoder().decode(bytes));
+		if (Number(decoded?.v) !== 1 || !Array.isArray(decoded?.c)) {
+			throw new Error('Invalid jump clone payload.');
+		}
+		return decoded.c.slice(0, 25).map((clone, index) => ({
+			name: String(clone?.n || '').slice(0, 100) || `Jump Clone ${index + 1}`,
+			locationLabel: String(clone?.l || '').slice(0, 200) || 'Unknown location',
+			implantTypeIds: (Array.isArray(clone?.i) ? clone.i : [])
+				.map((typeId) => Number(typeId || 0))
+				.filter((typeId) => Number.isSafeInteger(typeId) && typeId > 0)
+				.slice(0, 20)
+		}));
+	} catch (err) {
+		throw new Error('This shared link contains invalid jump clone data.');
+	}
+}
+
+async function hydrateSharedJumpClones(rows) {
+	const typeIds = Array.from(new Set((Array.isArray(rows) ? rows : [])
+		.flatMap((clone) => clone?.implantTypeIds || [])
+		.map((typeId) => Number(typeId || 0))
+		.filter((typeId) => typeId > 0)));
+	const implantInfoByTypeId = new Map(await Promise.all(typeIds.map(async (typeId) => [
+		typeId,
+		await getTypeInfo(typeId)
+	])));
+
+	return (Array.isArray(rows) ? rows : []).map((clone, index) => ({
+		cloneId: null,
+		name: String(clone?.name || '').trim() || `Jump Clone ${index + 1}`,
+		kind: 'Jump Clone',
+		isActive: false,
+		locationLabel: clone?.locationLabel || 'Unknown location',
+		implants: buildCloneImplantRows(clone?.implantTypeIds, implantInfoByTypeId)
+	}));
 }
 
 async function hydrateSharedSkills(records) {
@@ -1220,6 +1346,7 @@ async function renderSharedCharacterPage() {
 	const encodedTotalSP = shareData.encodedTotalSP;
 	const encodedBalance = shareData.encodedBalance;
 	const encodedSnapshotUnix = shareData.encodedSnapshotUnix;
+	const encodedJumpClones = shareData.encodedJumpClones || '';
 	const sharedTotalSP = decodeCompactInt(encodedTotalSP);
 	const hasSharedBalance = encodedBalance !== '';
 	const sharedBalance = decodeCompactInt(encodedBalance) / 100;
@@ -1259,14 +1386,19 @@ async function renderSharedCharacterPage() {
 			encodedSkills,
 			encodedTotalSP,
 			encodedBalance,
-			encodedSnapshotUnix
+			encodedSnapshotUnix,
+			encodedJumpClones
 		);
 		if (expectedSignature !== providedSignature) {
 			throw new Error('Sorry, that share link is invalid.');
 		}
 
 		const decodedRecords = await decodeShareSkillsPayload(encodedSkills);
-		const sharedData = await hydrateSharedSkills(decodedRecords);
+		const decodedJumpClones = await decodeShareJumpClonesPayload(encodedJumpClones);
+		const [sharedData, sharedJumpClones] = await Promise.all([
+			hydrateSharedSkills(decodedRecords),
+			hydrateSharedJumpClones(decodedJumpClones)
+		]);
 		const trainingSummary = findSharedTrainingSummary(sharedData.queue);
 		const now = Date.now();
 		const sharedCharacter = {
@@ -1304,6 +1436,7 @@ async function renderSharedCharacterPage() {
 				<li>${snapshotText}</li>
 				<li>Only first 25 skills in skill queue are shown.</li>
 				<li>Skills considered completed are not shown in Skill Queue.</li>
+				${encodedJumpClones ? '<li>Jump clones and their implants were included by the owner.</li>' : ''}
 				<li>Share links invalidate if the character changes corporations.</li>
 				<li>Share links expire after 30 days.</li>
 				<li>A crafty person <em>could</em> tamper with the URL to share fake character data.</li>
@@ -1317,6 +1450,9 @@ async function renderSharedCharacterPage() {
 			totalSP: sharedTotalSP,
 			hasSharedTotalSP: encodedTotalSP !== ''
 		}));
+		if (encodedJumpClones) {
+			page.appendChild(renderCharClones({ clones: sharedJumpClones }));
+		}
 	} catch (err) {
 		const alert = document.createElement('div');
 		alert.className = 'sq-alert';
@@ -1338,6 +1474,10 @@ function parseSharedCharacterRoute() {
 	if (parts[0] === 'share' && parts.length === 2 && window.location.hash) {
 		const joined = window.location.hash.slice(1);
 		const segments = joined.split('.');
+		let encodedJumpClones = '';
+		if (segments.length >= 6) {
+			encodedJumpClones = segments.pop() || '';
+		}
 		if (segments.length >= 5) {
 			const encodedSnapshotUnix = segments.pop();
 			const encodedBalance = segments.pop();
@@ -1351,7 +1491,8 @@ function parseSharedCharacterRoute() {
 				signature,
 				encodedTotalSP,
 				encodedBalance: encodedBalance || '',
-				encodedSnapshotUnix: encodedSnapshotUnix || ''
+				encodedSnapshotUnix: encodedSnapshotUnix || '',
+				encodedJumpClones
 			};
 		}
 	}
@@ -1360,6 +1501,10 @@ function parseSharedCharacterRoute() {
 	if (parts[0] === 'share' && parts.length >= 3) {
 		const joined = parts.slice(2).join('/');
 		const segments = joined.split('.');
+		let encodedJumpClones = '';
+		if (segments.length >= 6) {
+			encodedJumpClones = segments.pop() || '';
+		}
 		if (segments.length >= 5) {
 			const encodedSnapshotUnix = segments.pop();
 			const encodedBalance = segments.pop();
@@ -1373,7 +1518,8 @@ function parseSharedCharacterRoute() {
 				signature,
 				encodedTotalSP,
 				encodedBalance: encodedBalance || '',
-				encodedSnapshotUnix: encodedSnapshotUnix || ''
+				encodedSnapshotUnix: encodedSnapshotUnix || '',
+				encodedJumpClones
 			};
 		}
 		if (segments.length >= 4) {
@@ -1388,7 +1534,8 @@ function parseSharedCharacterRoute() {
 				signature,
 				encodedTotalSP,
 				encodedBalance: encodedBalance || '',
-				encodedSnapshotUnix: ''
+				encodedSnapshotUnix: '',
+				encodedJumpClones: ''
 			};
 		}
 		const lastDot = joined.lastIndexOf('.');
@@ -1401,7 +1548,8 @@ function parseSharedCharacterRoute() {
 				signature: joined.slice(secondLastDot + 1, lastDot),
 				encodedTotalSP: joined.slice(lastDot + 1),
 				encodedBalance: '',
-				encodedSnapshotUnix: ''
+				encodedSnapshotUnix: '',
+				encodedJumpClones: ''
 			};
 		}
 		if (lastDot > 0) {
@@ -1412,7 +1560,8 @@ function parseSharedCharacterRoute() {
 				signature: joined.slice(lastDot + 1),
 				encodedTotalSP: '',
 				encodedBalance: '',
-				encodedSnapshotUnix: ''
+				encodedSnapshotUnix: '',
+				encodedJumpClones: ''
 			};
 		}
 	}
@@ -1425,7 +1574,8 @@ function parseSharedCharacterRoute() {
 		signature: String(params.get('sig') || '').trim(),
 		encodedTotalSP: String(params.get('sp') || '').trim(),
 		encodedBalance: String(params.get('isk') || params.get('bal') || '').trim(),
-		encodedSnapshotUnix: String(params.get('ts') || params.get('snapshot') || '').trim()
+		encodedSnapshotUnix: String(params.get('ts') || params.get('snapshot') || '').trim(),
+		encodedJumpClones: String(params.get('clones') || '').trim()
 	};
 }
 
@@ -1504,7 +1654,7 @@ async function renderCharacterPage(charName, tab = 'overview') {
 
 	await window.esi.changeCharacter(String(matched.character_id));
 	const characterId = String(window.esi.whoami.character_id);
-	const activeTab = ['overview', 'wallet', 'train'].includes(tab) ? tab : 'overview';
+	const activeTab = ['overview', 'wallet', 'train', 'clones'].includes(tab) ? tab : 'overview';
 	const data = await loadCharacterPageDataFromCache(characterId, activeTab);
 	const orderedCharacters = await getOrderedCharactersForNavbar(characters);
 
@@ -1658,6 +1808,17 @@ function buildCharacterTabContent(data, activeTab) {
 			suggestions: data.suggestions || [],
 			optimize: data.optimize || null
 		}));
+		if (data.lastUpdatedAt) {
+			const updated = document.createElement('p');
+			updated.className = 'sq-muted sq-char-note';
+			updated.textContent = `Last updated: ${formatDateTime(data.lastUpdatedAt)}`;
+			content.appendChild(updated);
+		}
+		return content;
+	}
+
+	if (activeTab === 'clones') {
+		content.appendChild(renderCharClones({ clones: data.clones || [] }));
 		if (data.lastUpdatedAt) {
 			const updated = document.createElement('p');
 			updated.className = 'sq-muted sq-char-note';
@@ -2576,6 +2737,7 @@ async function clearCharacterLocalData(characterId) {
 		`common:${charId}`,
 		`wallet:${charId}`,
 		`train:${charId}`,
+		getTrainCacheKey(charId),
 		`overview:${charId}`
 	];
 	for (const key of keys) {
@@ -3148,15 +3310,19 @@ async function loadCharacterPageDataFromCache(characterId, tab) {
 		return data;
 	}
 
-	if (tab === 'train') {
+	if (tab === 'train' || tab === 'clones') {
 		if (Number(data?.training?.trainingEndMs || 0) > 0 && Number(data.training.trainingEndMs) <= Date.now()) {
 			const overviewCached = await cacheGetCharacterData(`overview:${characterId}`);
 			applyOverviewTrainingToCommonData(data, overviewCached?.queue || []);
 		}
-		const trainData = (await cacheGetCharacterData(getTrainCacheKey(characterId))) || { implants: [], suggestions: [], optimize: null, updatedAt: 0 };
-		data.implants = trainData.implants;
-		data.suggestions = trainData.suggestions;
-		data.optimize = trainData.optimize || null;
+		const trainData = (await cacheGetCharacterData(getTrainCacheKey(characterId))) || { clones: [], implants: [], suggestions: [], optimize: null, updatedAt: 0 };
+		if (tab === 'clones') {
+			data.clones = trainData.clones || [];
+		} else {
+			data.implants = trainData.implants;
+			data.suggestions = trainData.suggestions;
+			data.optimize = trainData.optimize || null;
+		}
 		latestUpdatedAt = Math.max(latestUpdatedAt, Number(trainData.updatedAt || 0));
 		data.lastUpdatedAt = latestUpdatedAt || null;
 		return data;
@@ -3223,7 +3389,9 @@ async function isCharacterPageDataMissing(characterId) {
 		&& Array.isArray(train?.suggestions)
 		&& train.suggestions.length > 0
 		&& !Object.prototype.hasOwnProperty.call(train || {}, 'optimize');
-	return !common || !wallet || !train || !overview || missingTrainOptimize;
+	const missingTrainClones = Boolean(train)
+		&& !Object.prototype.hasOwnProperty.call(train || {}, 'clones');
+	return !common || !wallet || !train || !overview || missingTrainOptimize || missingTrainClones;
 }
 
 async function refreshCharacterSummaryInBackground(characterId, characterName) {
@@ -3375,14 +3543,17 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 	const missingTrainOptimize = Array.isArray(cachedTrain?.suggestions)
 		&& cachedTrain.suggestions.length > 0
 		&& !Object.prototype.hasOwnProperty.call(cachedTrain || {}, 'optimize');
+	const missingTrainClones = Boolean(cachedTrain)
+		&& !Object.prototype.hasOwnProperty.call(cachedTrain || {}, 'clones');
 	const finishedTraining = hasTrainingCompleted(cachedCommon?.training);
 	const shouldRefreshCommon = await shouldRefreshCharacterData(commonKey);
 	const shouldRefreshWallet = await shouldRefreshCharacterData(`wallet:${characterId}`);
 	const shouldRefreshTrain = await shouldRefreshCharacterData(getTrainCacheKey(characterId));
 	const shouldRefreshOverview = await shouldRefreshCharacterData(`overview:${characterId}`);
-	if (!shouldRefreshCommon && !missingTrainingLevel && !missingTrainingBoosterFlag && !missingCharacterBoosterFlag && !missingOverviewBoosterFlags && !missingTrainOptimize && !finishedTraining) {
+	if (!shouldRefreshCommon && !missingTrainingLevel && !missingTrainingBoosterFlag && !missingCharacterBoosterFlag && !missingOverviewBoosterFlags && !missingTrainOptimize && !missingTrainClones && !finishedTraining) {
 		if (tab === 'wallet' && !shouldRefreshWallet) return;
 		if (tab === 'train' && !shouldRefreshTrain) return;
+		if (tab === 'clones' && !shouldRefreshTrain) return;
 		if (tab === 'overview' && !shouldRefreshOverview) return;
 		if (tab == null && !shouldRefreshWallet && !shouldRefreshTrain && !shouldRefreshOverview) return;
 	}
@@ -3404,7 +3575,16 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 		}
 
 		if (tab === 'train') {
-			if (!shouldRefreshTrain && !missingTrainOptimize) return;
+			if (!shouldRefreshTrain && !missingTrainOptimize && !missingTrainClones) return;
+			const train = await fetchTrainingSuggestions(characterId);
+			train.updatedAt = Date.now();
+			await cacheSetCharacterData(getTrainCacheKey(characterId), train)
+				|| await cacheTouchCharacterData(getTrainCacheKey(characterId));
+			return;
+		}
+
+		if (tab === 'clones') {
+			if (!shouldRefreshTrain && !missingTrainClones) return;
 			const train = await fetchTrainingSuggestions(characterId);
 			train.updatedAt = Date.now();
 			await cacheSetCharacterData(getTrainCacheKey(characterId), train)
@@ -3427,7 +3607,7 @@ async function refreshCharacterPageInBackground(characterId, tab) {
 				|| await cacheTouchCharacterData(`wallet:${characterId}`);
 		}
 
-		if (shouldRefreshTrain || missingTrainOptimize) {
+		if (shouldRefreshTrain || missingTrainOptimize || missingTrainClones) {
 			const train = await fetchTrainingSuggestions(characterId);
 			train.updatedAt = Date.now();
 			await cacheSetCharacterData(getTrainCacheKey(characterId), train)
@@ -3533,7 +3713,7 @@ function shouldRerenderCurrentRouteForKey(key) {
 			|| key.startsWith(`common:${renderedCharacterId}`)
 			|| key.startsWith(`overview:${renderedCharacterId}`)
 			|| key.startsWith(`wallet:${renderedCharacterId}`)
-			|| key.startsWith(`train:${renderedCharacterId}`);
+			|| key.startsWith(`${TRAIN_CACHE_KEY_PREFIX}:${renderedCharacterId}`);
 	}
 
 	if (route.name === 'settings' || route.name === 'readme' || route.name === 'share' || route.name === 'item') {
@@ -4004,7 +4184,7 @@ async function fetchWalletRows(characterId) {
 
 async function fetchTrainingSuggestions(characterId) {
 	try {
-		const [attributes, implants, skillsResponse, queueResponse] = await Promise.all([
+		const [attributes, activeImplantTypeIds, clonesResponse, skillsResponse, queueResponse] = await Promise.all([
 			fallbackUnlessCharacterRefreshTokenError(
 				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/attributes`, characterId),
 				null,
@@ -4013,6 +4193,11 @@ async function fetchTrainingSuggestions(characterId) {
 			fallbackUnlessCharacterRefreshTokenError(
 				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/implants`, characterId),
 				[],
+				characterId
+			),
+			fallbackUnlessCharacterRefreshTokenError(
+				fetchLatestCharacterAuthJson(`${ESI_BASE}/characters/${characterId}/clones`, characterId),
+				({ jump_clones: [] }),
 				characterId
 			),
 			fallbackUnlessCharacterRefreshTokenError(
@@ -4027,8 +4212,19 @@ async function fetchTrainingSuggestions(characterId) {
 			)
 		]);
 
-		const implantInfos = await Promise.all((implants || []).map((typeId) => getTypeInfo(typeId)));
-		const implantByAttribute = buildAttributeImplantMap(implantInfos);
+		const jumpClones = Array.isArray(clonesResponse?.jump_clones) ? clonesResponse.jump_clones : [];
+		const allImplantTypeIds = Array.from(new Set([
+			...(Array.isArray(activeImplantTypeIds) ? activeImplantTypeIds : []),
+			...jumpClones.flatMap((clone) => Array.isArray(clone?.implants) ? clone.implants : [])
+		].map((typeId) => Number(typeId || 0)).filter((typeId) => typeId > 0)));
+		const implantInfoByTypeId = new Map(await Promise.all(allImplantTypeIds.map(async (typeId) => [
+			typeId,
+			await getTypeInfo(typeId)
+		])));
+		const activeImplantInfos = (Array.isArray(activeImplantTypeIds) ? activeImplantTypeIds : [])
+			.map((typeId) => implantInfoByTypeId.get(Number(typeId || 0)))
+			.filter(Boolean);
+		const implantByAttribute = buildAttributeImplantMap(activeImplantInfos);
 		const attributeRows = ['charisma', 'intelligence', 'memory', 'perception', 'willpower'].map((attributeName) => ({
 			attributeName,
 			baseValue: Number(attributes?.[attributeName] || 0),
@@ -4042,7 +4238,8 @@ async function fetchTrainingSuggestions(characterId) {
 			implantByAttribute,
 			Array.isArray(queueResponse) ? queueResponse : []
 		);
-		return { implants: attributeRows, suggestions, optimize };
+		const clones = await buildCloneRows(clonesResponse, activeImplantTypeIds, implantInfoByTypeId);
+		return { clones, implants: attributeRows, suggestions, optimize };
 	} catch (err) {
 		if (await handleCharacterRefreshTokenError(err, characterId)) {
 			throw err;
@@ -4055,6 +4252,49 @@ async function fetchTrainingSuggestions(characterId) {
 		}
 		throw err; // Re-throw if no cache available
 	}
+}
+
+function buildCloneImplantRows(typeIds, implantInfoByTypeId = new Map()) {
+	return (Array.isArray(typeIds) ? typeIds : [])
+		.map((typeId) => {
+			const numericTypeId = Number(typeId || 0);
+			if (numericTypeId <= 0) return null;
+			const typeInfo = implantInfoByTypeId.get(numericTypeId);
+			return {
+				typeID: numericTypeId,
+				typeName: typeInfo?.name || `Implant ${numericTypeId}`,
+				slot: Math.max(0, Math.round(Number(_getDogmaValue(typeInfo, 331) || 0)))
+			};
+		})
+		.filter(Boolean)
+		.sort((left, right) => {
+			const leftSlot = Number(left.slot || Number.MAX_SAFE_INTEGER);
+			const rightSlot = Number(right.slot || Number.MAX_SAFE_INTEGER);
+			return leftSlot - rightSlot || String(left.typeName).localeCompare(String(right.typeName));
+		});
+}
+
+async function buildCloneRows(clonesResponse, activeImplantTypeIds = [], implantInfoByTypeId = new Map()) {
+	const rows = [{
+		cloneId: null,
+		name: 'Active Clone',
+		kind: 'Active',
+		isActive: true,
+		locationLabel: 'Current body',
+		implants: buildCloneImplantRows(activeImplantTypeIds, implantInfoByTypeId)
+	}];
+
+	const jumpClones = Array.isArray(clonesResponse?.jump_clones) ? clonesResponse.jump_clones : [];
+	const jumpCloneRows = await Promise.all(jumpClones.map(async (clone, index) => ({
+		cloneId: Number(clone?.jump_clone_id || 0) || null,
+		name: String(clone?.name || '').trim() || `Jump Clone ${index + 1}`,
+		kind: 'Jump Clone',
+		isActive: false,
+		locationLabel: await getCloneLocationLabel(clone?.location_id, clone?.location_type),
+		implants: buildCloneImplantRows(clone?.implants, implantInfoByTypeId)
+	})));
+
+	return rows.concat(jumpCloneRows);
 }
 
 function buildAttributeImplantMap(implantInfos = []) {
@@ -4332,6 +4572,28 @@ async function getAllianceInfo(allianceId) {
 		return info;
 	} catch (_) {
 		return null;
+	}
+}
+
+async function getCloneLocationLabel(locationId, locationType) {
+	const numericLocationId = Number(locationId || 0);
+	const normalizedType = String(locationType || '').toLowerCase();
+	if (numericLocationId <= 0) return 'Unknown location';
+
+	if (normalizedType !== 'station') {
+		return `${capitalizeFirst(normalizedType || 'location')} ${numericLocationId}`;
+	}
+
+	const cacheKey = `station-info:${numericLocationId}`;
+	const cached = await lookupCacheGet(cacheKey);
+	if (cached?.name) return cached.name;
+
+	try {
+		const info = await window.esi.doJsonRequest(`${ESI_BASE}/universe/stations/${numericLocationId}`);
+		if (info) await lookupCacheSet(cacheKey, info);
+		return info?.name || `Station ${numericLocationId}`;
+	} catch (_) {
+		return `Station ${numericLocationId}`;
 	}
 }
 
