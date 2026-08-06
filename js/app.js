@@ -23,6 +23,9 @@ const CHARACTER_DATA_UPDATED_EVENT = 'skillq:character-data-updated';
 const CHARACTER_DATA_SYNC_CHANNEL_NAME = 'skillq:character-data-sync';
 const CHARACTER_DATA_SYNC_TAB_ID = `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const TRAIN_CACHE_KEY_PREFIX = 'train-v2';
+const CHARACTER_NOTE_KEY_PREFIX = 'notes';
+const CHARACTER_NOTE_MAX_LENGTH = 10000;
+const CHARACTER_NOTE_AUTOSAVE_DELAY_MS = 2000;
 const characterDataSyncChannel = typeof BroadcastChannel !== 'undefined'
 	? new BroadcastChannel(CHARACTER_DATA_SYNC_CHANNEL_NAME)
 	: null;
@@ -50,7 +53,8 @@ const SHARE_SECTION_KEYS = {
 	skillQueue: 'skillQueue',
 	totalSkillPoints: 'totalSkillPoints',
 	walletBalance: 'walletBalance',
-	jumpClones: 'jumpClones'
+	jumpClones: 'jumpClones',
+	notes: 'notes'
 };
 let githubhash = "";
 const staticCacheHash = window.location.hostname === 'localhost' ? Date.now() : '--hash--';
@@ -65,6 +69,47 @@ function withStaticCacheHash(path) {
 
 function getTrainCacheKey(characterId) {
 	return `${TRAIN_CACHE_KEY_PREFIX}:${characterId}`;
+}
+
+function getCharacterNoteKey(characterId) {
+	return `${CHARACTER_NOTE_KEY_PREFIX}:${String(characterId || '')}`;
+}
+
+function normalizeCharacterNoteText(value) {
+	return String(value == null ? '' : value).slice(0, CHARACTER_NOTE_MAX_LENGTH);
+}
+
+async function getCharacterNoteRecord(characterId) {
+	const record = await cacheGetCharacterData(getCharacterNoteKey(characterId));
+	return {
+		text: normalizeCharacterNoteText(record?.text || ''),
+		updatedAt: Number(record?.updatedAt || 0) || null
+	};
+}
+
+async function saveCharacterNote(characterId, value, updatedAt = Date.now()) {
+	const key = getCharacterNoteKey(characterId);
+	const text = normalizeCharacterNoteText(value);
+	if (!text.trim()) {
+		const existing = await characterDataStore.get(key);
+		if (existing) {
+			await characterDataStore.delete(key);
+			announceCharacterDataUpdated(key);
+		}
+		return { text: '', updatedAt: null };
+	}
+
+	const timestamp = Number(updatedAt || 0);
+	const record = {
+		text,
+		updatedAt: Number.isFinite(timestamp) && timestamp > 0 ? timestamp : Date.now()
+	};
+	const existing = await characterDataStore.get(key);
+	if (String(existing?.text || '') !== record.text || Number(existing?.updatedAt || 0) !== record.updatedAt) {
+		await characterDataStore.set(key, record, null);
+		announceCharacterDataUpdated(key);
+	}
+	return record;
 }
 
 async function fetchLatestCharacterJson(url, method = 'GET', headers = null, body = null) {
@@ -387,7 +432,8 @@ function getDefaultShareSections() {
 		[SHARE_SECTION_KEYS.skillQueue]: true,
 		[SHARE_SECTION_KEYS.totalSkillPoints]: true,
 		[SHARE_SECTION_KEYS.walletBalance]: true,
-		[SHARE_SECTION_KEYS.jumpClones]: true
+		[SHARE_SECTION_KEYS.jumpClones]: true,
+		[SHARE_SECTION_KEYS.notes]: false
 	};
 }
 
@@ -399,12 +445,14 @@ function normalizeShareSections(sections) {
 		[SHARE_SECTION_KEYS.skillQueue]: sections[SHARE_SECTION_KEYS.skillQueue] !== false,
 		[SHARE_SECTION_KEYS.totalSkillPoints]: sections[SHARE_SECTION_KEYS.totalSkillPoints] !== false,
 		[SHARE_SECTION_KEYS.walletBalance]: sections[SHARE_SECTION_KEYS.walletBalance] !== false,
-		[SHARE_SECTION_KEYS.jumpClones]: sections[SHARE_SECTION_KEYS.jumpClones] !== false
+		[SHARE_SECTION_KEYS.jumpClones]: sections[SHARE_SECTION_KEYS.jumpClones] !== false,
+		[SHARE_SECTION_KEYS.notes]: sections[SHARE_SECTION_KEYS.notes] === true
 	};
 }
 
-function getShareSectionChecklistState({ skills = [], queue = [], totalSP = 0, balance = 0, clones = [] } = {}) {
+function getShareSectionChecklistState({ skills = [], queue = [], totalSP = 0, balance = 0, clones = [], note = '' } = {}) {
 	const jumpClones = (Array.isArray(clones) ? clones : []).filter((clone) => !clone?.isActive);
+	const noteText = normalizeCharacterNoteText(note);
 	return [
 		{
 			key: SHARE_SECTION_KEYS.overviewSkills,
@@ -441,6 +489,14 @@ function getShareSectionChecklistState({ skills = [], queue = [], totalSP = 0, b
 				? `${jumpClones.length} ${jumpClones.length === 1 ? 'clone' : 'clones'}, including implants (if any)`
 				: 'No jump clone data loaded yet',
 			available: jumpClones.length > 0
+		},
+		{
+			key: SHARE_SECTION_KEYS.notes,
+			label: 'Notes',
+			help: noteText.trim()
+				? `${noteText.length} ${noteText.length === 1 ? 'character' : 'characters'} ready — private by default`
+				: 'No notes saved for this character',
+			available: Boolean(noteText.trim())
 		}
 	];
 }
@@ -538,7 +594,8 @@ function showShareSectionChecklistDialog(checklistState, defaults = getDefaultSh
 			[SHARE_SECTION_KEYS.skillQueue]: checkboxByKey.get(SHARE_SECTION_KEYS.skillQueue)?.checked,
 			[SHARE_SECTION_KEYS.totalSkillPoints]: checkboxByKey.get(SHARE_SECTION_KEYS.totalSkillPoints)?.checked,
 			[SHARE_SECTION_KEYS.walletBalance]: checkboxByKey.get(SHARE_SECTION_KEYS.walletBalance)?.checked,
-			[SHARE_SECTION_KEYS.jumpClones]: checkboxByKey.get(SHARE_SECTION_KEYS.jumpClones)?.checked
+			[SHARE_SECTION_KEYS.jumpClones]: checkboxByKey.get(SHARE_SECTION_KEYS.jumpClones)?.checked,
+			[SHARE_SECTION_KEYS.notes]: checkboxByKey.get(SHARE_SECTION_KEYS.notes)?.checked
 		});
 
 		const hasAnySelectedSection = () => Array.from(checkboxByKey.values()).some((input) => input.checked);
@@ -595,15 +652,29 @@ function renderCharacterShareControls({ character, skills = [], queue = [], tota
 	button.addEventListener('click', async () => {
 		if (button.disabled) return;
 		const characterId = String(character?.character_id || '');
-		const trainCached = characterId
-			? await cacheGetCharacterData(getTrainCacheKey(characterId))
-			: null;
+		const [trainCached, noteRecord, overviewCached] = characterId
+			? await Promise.all([
+				cacheGetCharacterData(getTrainCacheKey(characterId)),
+				getCharacterNoteRecord(characterId),
+				cacheGetCharacterData(`overview:${characterId}`)
+			])
+			: [null, { text: '' }, null];
+		const shareSkills = Array.isArray(skills) && skills.length > 0
+			? skills
+			: (overviewCached?.skills || []);
+		const shareQueue = Array.isArray(queue) && queue.length > 0
+			? queue
+			: (overviewCached?.queue || []);
+		const shareTotalSP = Array.isArray(skills) && skills.length > 0
+			? totalSP
+			: Number(overviewCached?.totalSP || 0);
 		const checklistState = getShareSectionChecklistState({
-			skills,
-			queue,
-			totalSP,
+			skills: shareSkills,
+			queue: shareQueue,
+			totalSP: shareTotalSP,
 			balance: Number(character?.balance || 0),
-			clones: trainCached?.clones || []
+			clones: trainCached?.clones || [],
+			note: noteRecord.text
 		});
 		const selectedSections = await showShareSectionChecklistDialog(checklistState, getDefaultShareSections());
 		if (!selectedSections) return;
@@ -612,7 +683,7 @@ function renderCharacterShareControls({ character, skills = [], queue = [], tota
 		const previousTitle = button.title;
 		button.title = 'Building share link...';
 		try {
-			const url = await buildCharacterShareUrl(character, skills, queue, totalSP, selectedSections);
+			const url = await buildCharacterShareUrl(character, shareSkills, shareQueue, shareTotalSP, selectedSections);
 			if (navigator.clipboard?.writeText) {
 				await navigator.clipboard.writeText(url);
 				button.title = 'Share link copied';
@@ -770,15 +841,27 @@ async function buildCharacterShareUrl(character, skills, queue = [], totalSP = 0
 		}
 		encodedJumpClones = await encodeShareJumpClonesPayload(jumpClones);
 	}
+	let encodedNotes = '';
+	if (sections[SHARE_SECTION_KEYS.notes]) {
+		const noteRecord = await getCharacterNoteRecord(characterId);
+		if (!noteRecord.text.trim()) {
+			throw new Error('Notes are not available for this share.');
+		}
+		encodedNotes = await encodeShareNotesPayload(noteRecord.text);
+	}
 	const signature = await createCharacterShareSignature(
 		shareContext,
 		encodedSkills,
 		encodedTotalSP,
 		encodedBalance,
 		encodedSnapshotUnix,
-		encodedJumpClones
+		encodedJumpClones,
+		encodedNotes
 	);
 	const baseUrl = `${window.location.origin}/share/${encodeURIComponent(characterId)}#${encodedSkills}.${signature}.${encodedTotalSP}.${encodedBalance}.${encodedSnapshotUnix}`;
+	if (encodedNotes) {
+		return `${baseUrl}.${encodedJumpClones}.${encodedNotes}`;
+	}
 	return encodedJumpClones ? `${baseUrl}.${encodedJumpClones}` : baseUrl;
 }
 
@@ -896,7 +979,7 @@ async function getCharacterShareContext(characterId, options = {}) {
 	};
 }
 
-async function createCharacterShareSignature(shareContext, encodedSkills, encodedTotalSP = '', encodedBalance = '', encodedSnapshotUnix = '', encodedJumpClones = '') {
+async function createCharacterShareSignature(shareContext, encodedSkills, encodedTotalSP = '', encodedBalance = '', encodedSnapshotUnix = '', encodedJumpClones = '', encodedNotes = '') {
 	const signatureParts = [
 		`skillq-share-v${SHARE_URL_VERSION}`,
 		String(shareContext.character.character_id || ''),
@@ -909,6 +992,10 @@ async function createCharacterShareSignature(shareContext, encodedSkills, encode
 	];
 	if (encodedJumpClones) {
 		signatureParts.push(String(encodedJumpClones));
+	}
+	if (encodedNotes) {
+		if (!encodedJumpClones) signatureParts.push('');
+		signatureParts.push(String(encodedNotes));
 	}
 	const signatureText = signatureParts.join('|');
 	return (await sha256Base64Url(signatureText)).slice(0, 16);
@@ -1098,6 +1185,63 @@ async function encodeShareJumpClonesPayload(clones) {
 	}
 
 	return candidates.reduce((shortest, candidate) => (candidate.length < shortest.length ? candidate : shortest), rawPayload);
+}
+
+async function encodeShareNotesPayload(note) {
+	const text = normalizeCharacterNoteText(note);
+	if (!text.trim()) return '';
+
+	const rawBytes = new TextEncoder().encode(text);
+	const rawPayload = `n1_${bytesToBase64Url(rawBytes)}`;
+	if (!supportsShareCompressionStreams()) return rawPayload;
+
+	const candidates = [rawPayload];
+	try {
+		const deflated = await deflateBytes(rawBytes);
+		candidates.push(`n1d_${bytesToBase64Url(deflated)}`);
+	} catch (err) {
+		console.warn('Deflate compression unavailable for notes share payload.', err);
+	}
+	try {
+		const gzipped = await gzipBytes(rawBytes);
+		candidates.push(`n1g_${bytesToBase64Url(gzipped)}`);
+	} catch (err) {
+		console.warn('Gzip compression unavailable for notes share payload.', err);
+	}
+
+	return candidates.reduce((shortest, candidate) => (candidate.length < shortest.length ? candidate : shortest), rawPayload);
+}
+
+async function decodeShareNotesPayload(encodedNotes) {
+	const payload = String(encodedNotes || '').trim();
+	if (!payload) return '';
+
+	try {
+		let bytes;
+		if (payload.startsWith('n1_')) {
+			bytes = base64UrlToBytes(payload.slice(3));
+		} else if (payload.startsWith('n1d_')) {
+			if (!supportsShareCompressionStreams()) {
+				throw new Error('CompressionStream support is unavailable.');
+			}
+			bytes = await inflateBytes(base64UrlToBytes(payload.slice(4)));
+		} else if (payload.startsWith('n1g_')) {
+			if (!supportsShareCompressionStreams()) {
+				throw new Error('CompressionStream support is unavailable.');
+			}
+			bytes = await gunzipBytes(base64UrlToBytes(payload.slice(4)));
+		} else {
+			throw new Error('Unsupported notes payload.');
+		}
+
+		const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+		if (text.length > CHARACTER_NOTE_MAX_LENGTH) {
+			throw new Error('Notes payload is too large.');
+		}
+		return text;
+	} catch (err) {
+		throw new Error('This shared link contains invalid notes data.');
+	}
 }
 
 async function decodeShareJumpClonesPayload(encodedJumpClones) {
@@ -1347,6 +1491,7 @@ async function renderSharedCharacterPage() {
 	const encodedBalance = shareData.encodedBalance;
 	const encodedSnapshotUnix = shareData.encodedSnapshotUnix;
 	const encodedJumpClones = shareData.encodedJumpClones || '';
+	const encodedNotes = shareData.encodedNotes || '';
 	const sharedTotalSP = decodeCompactInt(encodedTotalSP);
 	const hasSharedBalance = encodedBalance !== '';
 	const sharedBalance = decodeCompactInt(encodedBalance) / 100;
@@ -1387,7 +1532,8 @@ async function renderSharedCharacterPage() {
 			encodedTotalSP,
 			encodedBalance,
 			encodedSnapshotUnix,
-			encodedJumpClones
+			encodedJumpClones,
+			encodedNotes
 		);
 		if (expectedSignature !== providedSignature) {
 			throw new Error('Sorry, that share link is invalid.');
@@ -1395,6 +1541,7 @@ async function renderSharedCharacterPage() {
 
 		const decodedRecords = await decodeShareSkillsPayload(encodedSkills);
 		const decodedJumpClones = await decodeShareJumpClonesPayload(encodedJumpClones);
+		const sharedNotes = await decodeShareNotesPayload(encodedNotes);
 		const [sharedData, sharedJumpClones] = await Promise.all([
 			hydrateSharedSkills(decodedRecords),
 			hydrateSharedJumpClones(decodedJumpClones)
@@ -1437,12 +1584,16 @@ async function renderSharedCharacterPage() {
 				<li>Only first 25 skills in skill queue are shown.</li>
 				<li>Skills considered completed are not shown in Skill Queue.</li>
 				${encodedJumpClones ? '<li>Jump clones and their implants were included by the owner.</li>' : ''}
+				${encodedNotes ? '<li>Character notes were included by the owner.</li>' : ''}
 				<li>Share links invalidate if the character changes corporations.</li>
 				<li>Share links expire after 30 days.</li>
 				<li>A crafty person <em>could</em> tamper with the URL to share fake character data.</li>
 			</ul>
 		`;
 		page.appendChild(notice);
+		if (encodedNotes) {
+			page.appendChild(renderSharedCharacterNotes(sharedNotes));
+		}
 
 		page.appendChild(renderSharedCharSkills({
 			queue: sharedData.queue,
@@ -1475,7 +1626,11 @@ function parseSharedCharacterRoute() {
 		const joined = window.location.hash.slice(1);
 		const segments = joined.split('.');
 		let encodedJumpClones = '';
-		if (segments.length >= 6) {
+		let encodedNotes = '';
+		if (segments.length >= 7) {
+			encodedNotes = segments.pop() || '';
+			encodedJumpClones = segments.pop() || '';
+		} else if (segments.length >= 6) {
 			encodedJumpClones = segments.pop() || '';
 		}
 		if (segments.length >= 5) {
@@ -1492,7 +1647,8 @@ function parseSharedCharacterRoute() {
 				encodedTotalSP,
 				encodedBalance: encodedBalance || '',
 				encodedSnapshotUnix: encodedSnapshotUnix || '',
-				encodedJumpClones
+				encodedJumpClones,
+				encodedNotes
 			};
 		}
 	}
@@ -1502,7 +1658,11 @@ function parseSharedCharacterRoute() {
 		const joined = parts.slice(2).join('/');
 		const segments = joined.split('.');
 		let encodedJumpClones = '';
-		if (segments.length >= 6) {
+		let encodedNotes = '';
+		if (segments.length >= 7) {
+			encodedNotes = segments.pop() || '';
+			encodedJumpClones = segments.pop() || '';
+		} else if (segments.length >= 6) {
 			encodedJumpClones = segments.pop() || '';
 		}
 		if (segments.length >= 5) {
@@ -1519,7 +1679,8 @@ function parseSharedCharacterRoute() {
 				encodedTotalSP,
 				encodedBalance: encodedBalance || '',
 				encodedSnapshotUnix: encodedSnapshotUnix || '',
-				encodedJumpClones
+				encodedJumpClones,
+				encodedNotes
 			};
 		}
 		if (segments.length >= 4) {
@@ -1535,7 +1696,8 @@ function parseSharedCharacterRoute() {
 				encodedTotalSP,
 				encodedBalance: encodedBalance || '',
 				encodedSnapshotUnix: '',
-				encodedJumpClones: ''
+				encodedJumpClones: '',
+				encodedNotes: ''
 			};
 		}
 		const lastDot = joined.lastIndexOf('.');
@@ -1549,7 +1711,8 @@ function parseSharedCharacterRoute() {
 				encodedTotalSP: joined.slice(lastDot + 1),
 				encodedBalance: '',
 				encodedSnapshotUnix: '',
-				encodedJumpClones: ''
+				encodedJumpClones: '',
+				encodedNotes: ''
 			};
 		}
 		if (lastDot > 0) {
@@ -1561,7 +1724,8 @@ function parseSharedCharacterRoute() {
 				encodedTotalSP: '',
 				encodedBalance: '',
 				encodedSnapshotUnix: '',
-				encodedJumpClones: ''
+				encodedJumpClones: '',
+				encodedNotes: ''
 			};
 		}
 	}
@@ -1575,7 +1739,8 @@ function parseSharedCharacterRoute() {
 		encodedTotalSP: String(params.get('sp') || '').trim(),
 		encodedBalance: String(params.get('isk') || params.get('bal') || '').trim(),
 		encodedSnapshotUnix: String(params.get('ts') || params.get('snapshot') || '').trim(),
-		encodedJumpClones: String(params.get('clones') || '').trim()
+		encodedJumpClones: String(params.get('clones') || '').trim(),
+		encodedNotes: String(params.get('notes') || '').trim()
 	};
 }
 
@@ -1654,7 +1819,7 @@ async function renderCharacterPage(charName, tab = 'overview') {
 
 	await window.esi.changeCharacter(String(matched.character_id));
 	const characterId = String(window.esi.whoami.character_id);
-	const activeTab = ['overview', 'wallet', 'train', 'clones'].includes(tab) ? tab : 'overview';
+	const activeTab = ['overview', 'wallet', 'train', 'clones', 'notes'].includes(tab) ? tab : 'overview';
 	const data = await loadCharacterPageDataFromCache(characterId, activeTab);
 	const orderedCharacters = await getOrderedCharactersForNavbar(characters);
 
@@ -1684,13 +1849,13 @@ async function renderCharacterPage(charName, tab = 'overview') {
 	const nextContent = buildCharacterTabContent(data, activeTab);
 	nextContent.dataset.role = 'char-tab-content';
 
-	const nextActions = activeTab === 'overview' ? renderCharacterShareControls({
+	const nextActions = renderCharacterShareControls({
 		character: data.character,
 		skills: data.skills || [],
 		queue: data.queue || [],
 		totalSP: data.totalSP || 0,
 		lastUpdatedAt: data.lastUpdatedAt || null
-	}) : null;
+	});
 
 	if (!canPatchInPlace) {
 		page = document.createElement('div');
@@ -1789,8 +1954,152 @@ function buildCharacterInfoSignature(data) {
 	});
 }
 
+function renderCharacterNotesEditor({ characterId, note = '', updatedAt = null } = {}) {
+	const section = document.createElement('section');
+	section.className = 'sq-notes';
+
+	const heading = document.createElement('h4');
+	heading.className = 'sq-section-title';
+	heading.textContent = 'Character Notes';
+	section.appendChild(heading);
+
+	const help = document.createElement('p');
+	help.className = 'sq-muted';
+	help.textContent = 'Changes save automatically after you stop typing. Notes are included in encrypted backups and are never shared unless you check Notes when creating a link.';
+	section.appendChild(help);
+
+	const editor = document.createElement('div');
+	editor.className = 'sq-notes__form';
+
+	const textarea = document.createElement('textarea');
+	textarea.className = 'sq-notes__textarea';
+	textarea.name = 'characterNote';
+	textarea.rows = 12;
+	textarea.maxLength = CHARACTER_NOTE_MAX_LENGTH;
+	textarea.placeholder = 'Add reminders, plans, fittings, or anything else you want to remember about this character.';
+	textarea.value = normalizeCharacterNoteText(note);
+	textarea.dataset.initialValue = textarea.value;
+	textarea.setAttribute('aria-label', 'Character notes');
+	editor.appendChild(textarea);
+
+	const footer = document.createElement('div');
+	footer.className = 'sq-notes__footer';
+
+	const meta = document.createElement('div');
+	meta.className = 'sq-notes__meta';
+	const count = document.createElement('span');
+	count.className = 'sq-muted';
+	const status = document.createElement('span');
+	status.className = 'sq-muted';
+	status.setAttribute('role', 'status');
+	status.setAttribute('aria-live', 'polite');
+	meta.appendChild(count);
+	meta.appendChild(status);
+	footer.appendChild(meta);
+	editor.appendChild(footer);
+	section.appendChild(editor);
+
+	let saveTimer = null;
+	let saveInProgress = false;
+	let saveState = 'idle';
+
+	const syncState = () => {
+		const isDirty = textarea.value !== textarea.dataset.initialValue;
+		count.textContent = `${textarea.value.length.toLocaleString()} / ${CHARACTER_NOTE_MAX_LENGTH.toLocaleString()}`;
+		if (saveState === 'saving') {
+			status.textContent = 'Saving...';
+		} else if (saveState === 'error') {
+			status.textContent = 'Unable to save. Keep typing or leave the field to retry.';
+		} else if (isDirty) {
+			status.textContent = 'Autosave pending...';
+		} else {
+			status.textContent = updatedAt ? `Saved: ${formatDateTime(updatedAt)} UTC` : 'Nothing saved yet';
+		}
+	};
+
+	const scheduleSave = () => {
+		if (saveTimer) clearTimeout(saveTimer);
+		saveTimer = setTimeout(() => {
+			saveTimer = null;
+			persistNote();
+		}, CHARACTER_NOTE_AUTOSAVE_DELAY_MS);
+	};
+
+	const persistNote = async () => {
+		if (saveInProgress) {
+			scheduleSave();
+			return;
+		}
+		if (textarea.value === textarea.dataset.initialValue) return;
+
+		if (saveTimer) {
+			clearTimeout(saveTimer);
+			saveTimer = null;
+		}
+		const valueBeingSaved = textarea.value;
+		saveInProgress = true;
+		saveState = 'saving';
+		syncState();
+		try {
+			const saved = await saveCharacterNote(characterId, valueBeingSaved);
+			if (textarea.value === valueBeingSaved) {
+				textarea.value = saved.text;
+			}
+			textarea.dataset.initialValue = saved.text;
+			updatedAt = saved.updatedAt;
+			saveState = 'idle';
+		} catch (err) {
+			console.warn('Unable to autosave character notes.', err);
+			saveState = 'error';
+		} finally {
+			saveInProgress = false;
+			syncState();
+			if (textarea.value !== textarea.dataset.initialValue && saveState !== 'error') {
+				scheduleSave();
+			}
+		}
+	};
+
+	textarea.addEventListener('input', () => {
+		saveState = 'idle';
+		scheduleSave();
+		syncState();
+	});
+	textarea.addEventListener('blur', () => {
+		if (textarea.value !== textarea.dataset.initialValue) persistNote();
+	});
+
+	syncState();
+	return section;
+}
+
+function renderSharedCharacterNotes(note) {
+	const section = document.createElement('section');
+	section.className = 'sq-notes sq-notes--shared';
+
+	const heading = document.createElement('h4');
+	heading.className = 'sq-section-title';
+	heading.textContent = 'Shared Notes';
+	section.appendChild(heading);
+
+	const body = document.createElement('div');
+	body.className = 'sq-notes__shared-text';
+	body.textContent = normalizeCharacterNoteText(note);
+	section.appendChild(body);
+	return section;
+}
+
 function buildCharacterTabContent(data, activeTab) {
 	const content = document.createElement('div');
+	if (activeTab === 'notes') {
+		content.appendChild(renderCharacterNotesEditor({
+			characterId: data.character?.character_id,
+			note: data.note || '',
+			updatedAt: data.noteUpdatedAt || null
+		}));
+		return content;
+	}
+
 	if (activeTab === 'wallet') {
 		content.appendChild(renderCharWallet({ transactions: data.wallet || [] }));
 		if (data.lastUpdatedAt) {
@@ -2134,7 +2443,7 @@ async function renderAccountPage() {
 
 	const backupNote = document.createElement('p');
 	backupNote.className = 'sq-muted';
-	backupNote.textContent = 'Exports include characters, refresh tokens, and local SkillQ settings in an encrypted zip file.';
+	backupNote.textContent = 'Exports include characters, refresh tokens, per-character notes, and local SkillQ settings in an encrypted zip file.';
 	backupPanel.appendChild(backupNote);
 
 	form.appendChild(backupPanel);
@@ -2738,7 +3047,8 @@ async function clearCharacterLocalData(characterId) {
 		`wallet:${charId}`,
 		`train:${charId}`,
 		getTrainCacheKey(charId),
-		`overview:${charId}`
+		`overview:${charId}`,
+		getCharacterNoteKey(charId)
 	];
 	for (const key of keys) {
 		await characterDataStore.delete(key);
@@ -3065,6 +3375,9 @@ async function collectSkillqBackupPayload() {
 
 	const characters = Array.from(charactersById.values())
 		.sort((left, right) => String(left.whoami?.name || '').localeCompare(String(right.whoami?.name || '')));
+	for (const entry of characters) {
+		entry.note = await getCharacterNoteRecord(entry.character_id);
+	}
 
 	let activeCharacterId = null;
 	if (globalWhoamiRaw) {
@@ -3123,6 +3436,9 @@ async function writeImportedBackupPayload(payload) {
 			token_type: 'Bearer'
 		}));
 		await window.esi.store.delete(`simpleesi-${characterId}-access_token`);
+		if (entry.note && Object.prototype.hasOwnProperty.call(entry.note, 'text')) {
+			await saveCharacterNote(characterId, entry.note.text, entry.note.updatedAt);
+		}
 	}
 
 	const preferredCharacterId = String(payload.activeCharacterId || characters[0]?.character_id || '');
@@ -3297,6 +3613,12 @@ async function loadCharacterPageDataFromCache(characterId, tab) {
 		data.message = null;
 	}
 	let latestUpdatedAt = Number(data.updatedAt || 0);
+	if (tab === 'notes') {
+		const noteRecord = await getCharacterNoteRecord(characterId);
+		data.note = noteRecord.text;
+		data.noteUpdatedAt = noteRecord.updatedAt;
+		return data;
+	}
 
 	if (tab === 'wallet') {
 		if (Number(data?.training?.trainingEndMs || 0) > 0 && Number(data.training.trainingEndMs) <= Date.now()) {
@@ -3713,7 +4035,8 @@ function shouldRerenderCurrentRouteForKey(key) {
 			|| key.startsWith(`common:${renderedCharacterId}`)
 			|| key.startsWith(`overview:${renderedCharacterId}`)
 			|| key.startsWith(`wallet:${renderedCharacterId}`)
-			|| key.startsWith(`${TRAIN_CACHE_KEY_PREFIX}:${renderedCharacterId}`);
+			|| key.startsWith(`${TRAIN_CACHE_KEY_PREFIX}:${renderedCharacterId}`)
+			|| key === getCharacterNoteKey(renderedCharacterId);
 	}
 
 	if (route.name === 'settings' || route.name === 'readme' || route.name === 'share' || route.name === 'item') {
@@ -3734,6 +4057,10 @@ function scheduleRouteRerender() {
 			return;
 		}
 		if ((window.location.pathname === '/settings' || window.location.pathname === '/settings/' || window.location.pathname === '/account' || window.location.pathname === '/account/') && hasUnsavedAccountChanges()) {
+			return;
+		}
+		const currentRoute = parseRoute(window.location.pathname);
+		if (currentRoute.name === 'char' && currentRoute.tab === 'notes' && hasUnsavedCharacterNoteChanges()) {
 			return;
 		}
 		handleRoute();
@@ -3762,6 +4089,12 @@ function hasUnsavedAccountChanges() {
 		if (String(field.value ?? '') !== initialValue) return true;
 	}
 	return false;
+}
+
+function hasUnsavedCharacterNoteChanges() {
+	const textarea = document.querySelector('.sq-notes__textarea');
+	if (!textarea) return false;
+	return String(textarea.value || '') !== String(textarea.dataset.initialValue || '');
 }
 
 async function shouldRunScheduledRefresh() {
@@ -4660,15 +4993,12 @@ async function cacheSetCharacterData(key, value) {
 		if (areCharacterCacheValuesEqual(key, existing, value)) {
 			return false;
 		}
-		const ttl = key === LAST_BACKGROUND_REFRESH_KEY ? null : CHARACTER_DATA_RETENTION_MS;
+		const ttl = key === LAST_BACKGROUND_REFRESH_KEY || key.startsWith(`${CHARACTER_NOTE_KEY_PREFIX}:`)
+			? null
+			: CHARACTER_DATA_RETENTION_MS;
 		await characterDataStore.set(key, value, ttl);
 		if (key !== LAST_BACKGROUND_REFRESH_KEY) {
-			window.dispatchEvent(new CustomEvent(CHARACTER_DATA_UPDATED_EVENT, { detail: { key } }));
-			characterDataSyncChannel?.postMessage({
-				type: CHARACTER_DATA_UPDATED_EVENT,
-				key,
-				fromTabId: CHARACTER_DATA_SYNC_TAB_ID
-			});
+			announceCharacterDataUpdated(key);
 		}
 		return true;
 	} catch (_) {
@@ -4677,13 +5007,24 @@ async function cacheSetCharacterData(key, value) {
 	}
 }
 
+function announceCharacterDataUpdated(key) {
+	window.dispatchEvent(new CustomEvent(CHARACTER_DATA_UPDATED_EVENT, { detail: { key } }));
+	characterDataSyncChannel?.postMessage({
+		type: CHARACTER_DATA_UPDATED_EVENT,
+		key,
+		fromTabId: CHARACTER_DATA_SYNC_TAB_ID
+	});
+}
+
 async function cacheTouchCharacterData(key) {
 	try {
 		const existing = await characterDataStore.get(key);
 		if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
 			return false;
 		}
-		const ttl = key === LAST_BACKGROUND_REFRESH_KEY ? null : CHARACTER_DATA_RETENTION_MS;
+		const ttl = key === LAST_BACKGROUND_REFRESH_KEY || key.startsWith(`${CHARACTER_NOTE_KEY_PREFIX}:`)
+			? null
+			: CHARACTER_DATA_RETENTION_MS;
 		await characterDataStore.set(key, {
 			...existing,
 			updatedAt: Date.now()
