@@ -1210,6 +1210,50 @@ text-align: left;
 .sq-wallet { padding: 0.75rem; overflow-x: auto; }
 
 /* ═══════════════════════════════════════════════════════════════
+   CHARACTER NOTES
+═══════════════════════════════════════════════════════════════ */
+.sq-notes { padding: 0.75rem; }
+.sq-notes .sq-section-title { margin-top: 0; }
+.sq-notes__form { display: grid; gap: 0.65rem; }
+.sq-notes__textarea {
+	width: 100%;
+	min-height: 13rem;
+	resize: vertical;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: 5px;
+	background: var(--input-bg);
+	color: var(--fg);
+	font: inherit;
+	line-height: 1.5;
+}
+.sq-notes__textarea:focus {
+	outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+	outline-offset: 1px;
+}
+.sq-notes__footer {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 0.75rem;
+}
+.sq-notes__meta {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	min-width: 0;
+}
+.sq-notes__meta .sq-muted { margin: 0; }
+.sq-notes__shared-text {
+	padding: 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: 5px;
+	background: var(--input-bg);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    TRAINING / IMPLANTS
 ═══════════════════════════════════════════════════════════════ */
 .sq-train,
@@ -1361,7 +1405,9 @@ text-align: left;
 	.sq-skills,
 	.sq-wallet,
 	.sq-train,
-	.sq-clones-page { padding: 0.5rem; }
+	.sq-clones-page,
+	.sq-notes { padding: 0.5rem; }
+	.sq-notes__meta { justify-content: space-between; }
 	.sq-train-top-panels { grid-template-columns: 1fr; gap: 0.75rem; }
 	.sq-alert { margin: 0.5rem; padding: 0.55rem 0.65rem; }
 	.sq-char-note { padding: 0 0.5rem 0.5rem; }

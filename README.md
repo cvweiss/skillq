@@ -18,6 +18,7 @@ SkillQ lets you monitor all your EVE Online characters in one place from any bro
 - **Booster detection and badges**: improved booster inference with queue row badges for affected skills and character-level booster status in header/card views
 - **Queue expiry badges**: highlights for queue ending within 24 hours, ending within 7 days, and recent no-active-training states
 - **Wallet journal**: recent wallet transactions with party name resolution
+- **Per-character notes**: keep local reminders and plans for each character, with encrypted backup support and explicit opt-in sharing
 - **Character groups and ordering**: organise characters into named groups and sort by SP, ISK, queue finish time, or a custom order
 - **Shareable character links**: generate a signed, compressed share URL that lets anyone view a snapshot of your skills and queue (automatically invalidates if you change corporations)
 - **Encrypted backups**: export characters, refresh tokens, and local settings into a password-protected backup zip and import it later
@@ -37,6 +38,7 @@ SkillQ can generate a snapshot link from a character overview page.
 > - **Queue cap**: only the first 25 queue entries are included in the share payload.
 > - **Completed queue rows are hidden from the queue table** on shared pages.
 > - **Completed queue progress is folded into Shared Skills levels** (example: if snapshot shows III but queued IV has already finished by view time, Shared Skills shows IV as completed).
+> - **Notes are private by default**: the Notes share checkbox starts off and must be explicitly enabled for each link.
 > - **Expiry**: shares expire after 30 days.
 > - **Corporation binding**: shares invalidate if the character changes corporations.
 > - **Tampering warning**: URL data can be edited by a user, so treat shared data as informational.
@@ -51,6 +53,7 @@ What is included:
 
 - Logged-in characters and their refresh tokens
 - Active character selection
+- Per-character notes
 - SkillQ settings (theme, layout, manage/group/order settings)
 - SkillQ local UI state stored under `skillq:` localStorage keys
 
